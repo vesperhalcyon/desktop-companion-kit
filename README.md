@@ -27,6 +27,8 @@ macOS may request Automation permission for the companion to access System Event
 ## Run from source
 
 ```sh
+git clone https://github.com/vesperhalcyon/desktop-companion-kit.git
+cd desktop-companion-kit
 npm install
 npm start
 ```

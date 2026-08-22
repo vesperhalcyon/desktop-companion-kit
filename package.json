@@ -3,6 +3,21 @@
   "version": "0.1.0",
   "description": "A configurable transparent macOS desktop companion with local page awareness and scheduled speech.",
   "license": "MIT",
+  "author": "Vesper",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vesperhalcyon/desktop-companion-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vesperhalcyon/desktop-companion-kit/issues"
+  },
+  "homepage": "https://github.com/vesperhalcyon/desktop-companion-kit#readme",
+  "keywords": [
+    "desktop-companion",
+    "electron",
+    "macos",
+    "desktop-pet"
+  ],
   "main": "main.js",
   "scripts": {
     "start": "electron .",
