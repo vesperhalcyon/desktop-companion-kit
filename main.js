@@ -131,6 +131,20 @@ function installSmokeCapture() {
         pageSightChecked: document.getElementById('observePages').checked
       })
     `);
+    let pageProbe = null;
+    if (process.env.DESKTOP_COMPANION_SMOKE_PAGE === '1') {
+      const context = await observePage();
+      pageProbe = {
+        ok: context.ok,
+        app: context.app,
+        hasText: Boolean(context.text),
+        textLength: context.text.length,
+        permissionHint: context.permissionHint
+      };
+      if (!pageProbe.ok || !pageProbe.hasText) {
+        throw new Error('Page sight did not read visible browser content');
+      }
+    }
     const image = await petWindow.capturePage();
     if (!ui.panelHidden || ui.speechHidden || !ui.speech.trim()) {
       throw new Error('Typed interaction did not produce a visible reply');
@@ -141,7 +155,8 @@ function installSmokeCapture() {
     fs.writeFileSync(imagePath, image.toPNG());
     process.stdout.write('[smoke] ' + JSON.stringify({
       ...ui,
-      imagePath
+      imagePath,
+      pageProbe
     }) + '\n');
     app.quit();
   });
@@ -258,7 +273,21 @@ function registerIpc() {
 }
 
 async function observePage() {
-  pageContext = await observer.observe();
+  let context = await observer.observe();
+  const frontmostIsSelf = context.app === character.name
+    || context.app === app.getName()
+    || context.app === 'Electron';
+
+  if (frontmostIsSelf && petWindow && !petWindow.isDestroyed()) {
+    const wasVisible = petWindow.isVisible();
+    app.hide();
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    context = await observer.observe();
+    app.show();
+    if (wasVisible) petWindow.showInactive();
+  }
+
+  pageContext = context;
   return pageContext;
 }
 
