@@ -7,7 +7,7 @@ A configurable transparent macOS desktop companion: draggable, independently wan
 - Lives in a frameless transparent always-on-top window.
 - Loads name, colors, lines, responses, and artwork from a character profile.
 - Can be dragged and occasionally wanders around the current display.
-- Has a small motion vocabulary: click-triggered waves, hops, bows, glances, flourishes, and sparse idle gestures.
+- Has a small motion vocabulary: click-triggered sword swings, waves, hops, bows, glances, flourishes, and sparse idle gestures.
 - Reacts to clicks and accepts short typed prompts.
 - Can optionally route ordinary typed conversation to a configured model bridge. The bridge is off by default.
 - Makes optional idle comments.

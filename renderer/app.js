@@ -6,6 +6,7 @@ const characterTitle = document.getElementById('characterTitle');
 const avatar = document.getElementById('avatar');
 const avatarWrap = document.getElementById('avatarWrap');
 const gestureMarks = document.getElementById('gestureMarks');
+const sword = document.getElementById('sword');
 const speech = document.getElementById('speech');
 const speechText = document.getElementById('speechText');
 const panel = document.getElementById('panel');
@@ -34,6 +35,7 @@ let pointer = null;
 let ignoreMouse = false;
 let gestureTimer = null;
 let idleGestureTimer = null;
+let hasShownSword = false;
 
 const gestureDurations = {
   wave: 1050,
@@ -41,10 +43,11 @@ const gestureDurations = {
   bow: 900,
   glance: 820,
   flourish: 1150,
-  nod: 720
+  nod: 720,
+  sword: 1200
 };
 
-const clickGestures = ['wave', 'hop', 'bow', 'glance', 'flourish'];
+const clickGestures = ['wave', 'hop', 'bow', 'glance', 'flourish', 'sword'];
 const idleGestures = ['wave', 'glance', 'nod', 'wave'];
 
 boot();
@@ -64,7 +67,9 @@ async function boot() {
   api.onMoveState((moving) => {
     avatarWrap.classList.toggle('moving', moving);
   });
-  avatarWrap.addEventListener('companion:gesture-test', () => playGesture('wave'));
+  avatarWrap.addEventListener('companion:gesture-test', (event) =>
+    playGesture(event.detail || 'wave')
+  );
   scheduleIdleGesture();
   setTimeout(() => showSpeech(state.character.greeting, 'hello'), 650);
 }
@@ -228,7 +233,13 @@ function setPanel(open) {
 
 function playGesture(name) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return '';
-  const gesture = gestureDurations[name] ? name : pickGesture(clickGestures);
+  const firstClickSword = !name && !hasShownSword;
+  const gesture = firstClickSword
+    ? 'sword'
+    : gestureDurations[name]
+      ? name
+      : pickGesture(clickGestures);
+  if (gesture === 'sword') hasShownSword = true;
   stopGesture();
   avatarWrap.dataset.gesture = gesture;
   avatarWrap.classList.add('gesture-' + gesture);
@@ -245,6 +256,7 @@ function stopGesture() {
   }
   delete avatarWrap.dataset.gesture;
   delete gestureMarks.dataset.gesture;
+  sword.removeAttribute('data-active');
 }
 
 function scheduleIdleGesture() {

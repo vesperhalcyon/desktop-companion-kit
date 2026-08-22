@@ -127,7 +127,10 @@ function installSmokeCapture() {
     const pageSmoke = process.env.DESKTOP_COMPANION_SMOKE_PAGE === '1';
     if (pageSmoke) store.update({ observePages: true });
     const gestureProbe = await petWindow.webContents.executeJavaScript(`
-      document.getElementById('avatarWrap').dispatchEvent(new CustomEvent('companion:gesture-test'));
+      document.getElementById('avatarWrap').dispatchEvent(new CustomEvent(
+        'companion:gesture-test',
+        { detail: 'sword' }
+      ));
       ({
         gesture: document.getElementById('avatarWrap').dataset.gesture || '',
         animationName: getComputedStyle(document.getElementById('avatar')).animationName,
@@ -188,7 +191,8 @@ function installSmokeCapture() {
       throw new Error('Typed interaction did not produce a visible reply');
     }
     if (!gestureProbe.reducedMotion
-        && (!gestureProbe.gesture || gestureProbe.animationName === 'none')) {
+        && (gestureProbe.gesture !== 'sword'
+          || gestureProbe.animationName !== 'swordStance')) {
       throw new Error('Gesture interaction did not start a visible animation');
     }
     if (modelSmoke && !ui.speech.includes('DEEPSEEK_DESKTOP_OK')) {
