@@ -117,7 +117,11 @@ function installSmokeCapture() {
     await petWindow.webContents.executeJavaScript(`
       document.getElementById('settingsButton').click();
       document.getElementById('askInput').value = 'smoke interaction line';
-      document.getElementById('askForm').requestSubmit();
+      document.getElementById('askInput').dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true
+      }));
     `);
     await new Promise((resolve) => setTimeout(resolve, 500));
     const ui = await petWindow.webContents.executeJavaScript(`

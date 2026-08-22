@@ -110,15 +110,26 @@ function wireEvents() {
     togglePanel();
   });
 
+  askInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    askForm.requestSubmit();
+  });
+
   askForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const message = askInput.value.trim();
     if (!message) return;
     askInput.value = '';
-    const result = await api.ask(message);
-    applySettings(result.settings);
-    setPanel(false);
-    showSpeech(result.line, 'reply');
+    try {
+      const result = await api.ask(message);
+      applySettings(result.settings);
+      setPanel(false);
+      showSpeech(result.line, 'reply');
+    } catch {
+      setPanel(false);
+      showSpeech('I caught the words, but the reply path failed. Try me once more.', 'error');
+    }
   });
 
   pageButton.addEventListener('click', async () => {
