@@ -5,6 +5,7 @@ const characterEyebrow = document.getElementById('characterEyebrow');
 const characterTitle = document.getElementById('characterTitle');
 const avatar = document.getElementById('avatar');
 const avatarWrap = document.getElementById('avatarWrap');
+const gestureMarks = document.getElementById('gestureMarks');
 const speech = document.getElementById('speech');
 const speechText = document.getElementById('speechText');
 const panel = document.getElementById('panel');
@@ -31,6 +32,20 @@ let panelIsOpen = false;
 let bubbleTimer = null;
 let pointer = null;
 let ignoreMouse = false;
+let gestureTimer = null;
+let idleGestureTimer = null;
+
+const gestureDurations = {
+  wave: 1050,
+  hop: 760,
+  bow: 900,
+  glance: 820,
+  flourish: 1150,
+  nod: 720
+};
+
+const clickGestures = ['wave', 'hop', 'bow', 'glance', 'flourish'];
+const idleGestures = ['wave', 'glance', 'nod', 'wave'];
 
 boot();
 
@@ -41,11 +56,16 @@ async function boot() {
   wireEvents();
   api.onComment((payload) => {
     if (payload.settings) applySettings(payload.settings);
+    if (payload.kind === 'scheduled') playGesture('flourish');
+    if (payload.kind === 'page') playGesture('nod');
+    if (payload.kind === 'idle' && Math.random() > 0.55) playGesture('glance');
     showSpeech(payload.text, payload.kind);
   });
   api.onMoveState((moving) => {
     avatarWrap.classList.toggle('moving', moving);
   });
+  avatarWrap.addEventListener('companion:gesture-test', () => playGesture('wave'));
+  scheduleIdleGesture();
   setTimeout(() => showSpeech(state.character.greeting, 'hello'), 650);
 }
 
@@ -97,7 +117,10 @@ function wireEvents() {
     pointer = null;
     avatarWrap.classList.remove('dragging');
     api.dragEnd();
-    if (!wasMoved) await api.react();
+    if (!wasMoved) {
+      playGesture();
+      await api.react();
+    }
   });
 
   avatarWrap.addEventListener('pointercancel', () => {
@@ -197,9 +220,47 @@ function setPanel(open) {
   api.setPanelOpen(panelIsOpen);
   setIgnoreMouse(false);
   if (panelIsOpen) {
+    stopGesture();
     clearTimeout(bubbleTimer);
     setTimeout(() => askInput.focus(), 80);
   }
+}
+
+function playGesture(name) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return '';
+  const gesture = gestureDurations[name] ? name : pickGesture(clickGestures);
+  stopGesture();
+  avatarWrap.dataset.gesture = gesture;
+  avatarWrap.classList.add('gesture-' + gesture);
+  gestureMarks.dataset.gesture = gesture;
+  gestureTimer = setTimeout(() => stopGesture(), gestureDurations[gesture]);
+  return gesture;
+}
+
+function stopGesture() {
+  clearTimeout(gestureTimer);
+  gestureTimer = null;
+  for (const name of Object.keys(gestureDurations)) {
+    avatarWrap.classList.remove('gesture-' + name);
+  }
+  delete avatarWrap.dataset.gesture;
+  delete gestureMarks.dataset.gesture;
+}
+
+function scheduleIdleGesture() {
+  clearTimeout(idleGestureTimer);
+  const delay = 24000 + Math.round(Math.random() * 30000);
+  idleGestureTimer = setTimeout(() => {
+    if (!panelIsOpen && !pointer && !avatarWrap.classList.contains('moving')
+        && document.visibilityState === 'visible') {
+      playGesture(pickGesture(idleGestures));
+    }
+    scheduleIdleGesture();
+  }, delay);
+}
+
+function pickGesture(options) {
+  return options[Math.floor(Math.random() * options.length)];
 }
 
 function showSpeech(text, kind) {

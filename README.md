@@ -7,6 +7,7 @@ A configurable transparent macOS desktop companion: draggable, independently wan
 - Lives in a frameless transparent always-on-top window.
 - Loads name, colors, lines, responses, and artwork from a character profile.
 - Can be dragged and occasionally wanders around the current display.
+- Has a small motion vocabulary: click-triggered waves, hops, bows, glances, flourishes, and sparse idle gestures.
 - Reacts to clicks and accepts short typed prompts.
 - Can optionally route ordinary typed conversation to a configured model bridge. The bridge is off by default.
 - Makes optional idle comments.
@@ -66,7 +67,7 @@ To enable model-backed typed conversation, copy `config/model-bridge.json` to `c
 - `lib/page-observer.js`: local macOS Automation adapter.
 - `lib/commentary.js`: deterministic local voice for the first version.
 - `lib/model-bridge.js`: optional bounded `execFile` adapter for model-backed typed chat.
-- `renderer/`: transparent UI, controls, drag interaction.
+- `renderer/`: transparent UI, controls, drag interaction, and reduced-motion-aware character gestures.
 - `assets/`: neutral public mascot and optional private production art.
 
 The optional OpenClaw voice remains a narrow adapter seam. It does not weaken agent isolation or silently send viewed page content into another session.

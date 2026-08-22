@@ -126,6 +126,14 @@ function installSmokeCapture() {
     const modelSmoke = process.env.DESKTOP_COMPANION_SMOKE_MODEL === '1';
     const pageSmoke = process.env.DESKTOP_COMPANION_SMOKE_PAGE === '1';
     if (pageSmoke) store.update({ observePages: true });
+    const gestureProbe = await petWindow.webContents.executeJavaScript(`
+      document.getElementById('avatarWrap').dispatchEvent(new CustomEvent('companion:gesture-test'));
+      ({
+        gesture: document.getElementById('avatarWrap').dataset.gesture || '',
+        animationName: getComputedStyle(document.getElementById('avatar')).animationName,
+        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
+      })
+    `);
     const smokeMessage = modelSmoke
       ? 'Reply with exactly this marker and nothing else: DEEPSEEK_DESKTOP_OK'
       : pageSmoke
@@ -179,6 +187,10 @@ function installSmokeCapture() {
     if (!ui.panelHidden || ui.speechHidden || !ui.speech.trim()) {
       throw new Error('Typed interaction did not produce a visible reply');
     }
+    if (!gestureProbe.reducedMotion
+        && (!gestureProbe.gesture || gestureProbe.animationName === 'none')) {
+      throw new Error('Gesture interaction did not start a visible animation');
+    }
     if (modelSmoke && !ui.speech.includes('DEEPSEEK_DESKTOP_OK')) {
       throw new Error('Model-backed interaction did not return the expected marker');
     }
@@ -191,6 +203,7 @@ function installSmokeCapture() {
     fs.writeFileSync(imagePath, image.toPNG());
     process.stdout.write('[smoke] ' + JSON.stringify({
       ...ui,
+      gestureProbe,
       imagePath,
       pageProbe
     }) + '\n');

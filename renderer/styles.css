@@ -73,6 +73,93 @@ button {
   filter: drop-shadow(0 11px 10px rgba(0, 0, 0, 0.42));
 }
 
+.gestureMarks {
+  position: absolute;
+  z-index: 3;
+  top: 54px;
+  right: 4px;
+  width: 72px;
+  height: 92px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gestureMarks span {
+  position: absolute;
+  right: 9px;
+  width: 34px;
+  height: 54px;
+  border: 2px solid transparent;
+  border-right-color: rgba(212, 181, 111, 0.92);
+  border-radius: 50%;
+}
+
+.gestureMarks span:nth-child(2) {
+  right: 0;
+  top: -8px;
+  width: 48px;
+  height: 70px;
+  opacity: 0.62;
+}
+
+.gestureMarks i {
+  position: absolute;
+  top: 11px;
+  right: 24px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgba(242, 234, 251, 0.92);
+  transform: rotate(45deg);
+}
+
+.avatarWrap.gesture-wave #avatar {
+  transform-origin: 54% 78%;
+  animation: gestureWave 1.05s cubic-bezier(0.33, 0.04, 0.22, 1);
+}
+
+.avatarWrap.gesture-wave .gestureMarks {
+  animation: waveMarks 1.05s ease-out;
+}
+
+.avatarWrap.gesture-hop #avatar {
+  transform-origin: 50% 100%;
+  animation: gestureHop 0.76s cubic-bezier(0.3, 0.75, 0.25, 1);
+}
+
+.avatarWrap.gesture-hop .groundGlow {
+  animation: hopShadow 0.76s ease-in-out;
+}
+
+.avatarWrap.gesture-bow #avatar {
+  transform-origin: 50% 96%;
+  animation: gestureBow 0.9s cubic-bezier(0.42, 0, 0.22, 1);
+}
+
+.avatarWrap.gesture-glance #avatar {
+  transform-origin: 50% 100%;
+  animation: gestureGlance 0.82s ease-in-out;
+}
+
+.avatarWrap.gesture-flourish #avatar {
+  transform-origin: 50% 92%;
+  animation: gestureFlourish 1.15s cubic-bezier(0.34, 0.1, 0.2, 1);
+}
+
+.avatarWrap.gesture-flourish .gestureMarks {
+  top: 36px;
+  right: 14px;
+  animation: flourishMarks 1.15s ease-out;
+}
+
+.avatarWrap.gesture-flourish .gestureMarks span {
+  display: none;
+}
+
+.avatarWrap.gesture-nod #avatar {
+  transform-origin: 50% 80%;
+  animation: gestureNod 0.72s ease-in-out;
+}
+
 .groundGlow {
   position: absolute;
   z-index: 1;
@@ -384,4 +471,68 @@ button {
 @keyframes panelIn {
   from { opacity: 0; transform: translateY(7px) scale(0.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes gestureWave {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  18% { transform: translateX(-2px) rotate(-2.4deg); }
+  38% { transform: translateX(3px) rotate(2.8deg); }
+  58% { transform: translateX(-2px) rotate(-2deg); }
+  78% { transform: translateX(2px) rotate(1.5deg); }
+}
+
+@keyframes waveMarks {
+  0%, 12%, 88%, 100% { opacity: 0; transform: translateX(-5px) rotate(-8deg); }
+  25%, 70% { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes gestureHop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  16% { transform: translateY(3px) scale(1.025, 0.975); }
+  48% { transform: translateY(-17px) scale(0.985, 1.015); }
+  72% { transform: translateY(1px) scale(1.018, 0.982); }
+}
+
+@keyframes hopShadow {
+  0%, 100% { transform: scaleX(1); opacity: 1; }
+  48% { transform: scaleX(0.66); opacity: 0.48; }
+}
+
+@keyframes gestureBow {
+  0%, 100% { transform: translateY(0) rotate(0deg) scaleY(1); }
+  38%, 62% { transform: translateY(7px) rotate(2.8deg) scaleY(0.965); }
+}
+
+@keyframes gestureGlance {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  28%, 66% { transform: translateX(-7px) rotate(-1.6deg); }
+}
+
+@keyframes gestureFlourish {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-5px) rotate(-3deg) scale(1.01); }
+  55% { transform: translateY(-9px) rotate(3.8deg) scale(1.025); }
+  78% { transform: translateY(-2px) rotate(-1.2deg) scale(1.006); }
+}
+
+@keyframes flourishMarks {
+  0%, 16%, 88%, 100% { opacity: 0; transform: translateY(8px) rotate(-20deg) scale(0.55); }
+  40%, 68% { opacity: 1; transform: translateY(0) rotate(10deg) scale(1); }
+}
+
+@keyframes gestureNod {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  28% { transform: translateY(4px) rotate(1deg); }
+  52% { transform: translateY(-1px) rotate(-0.4deg); }
+  72% { transform: translateY(3px) rotate(0.8deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatarWrap,
+  .avatarWrap.moving,
+  .avatarWrap #avatar,
+  .avatarWrap .groundGlow,
+  .avatarWrap .gestureMarks {
+    animation: none !important;
+  }
 }
