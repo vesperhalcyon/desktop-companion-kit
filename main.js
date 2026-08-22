@@ -1,0 +1,418 @@
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  screen,
+  shell
+} = require('electron');
+
+const { SettingsStore } = require('./lib/settings-store');
+const { loadCharacterProfile } = require('./lib/character-profile');
+const { InboxReader } = require('./lib/inbox');
+const { PageObserver } = require('./lib/page-observer');
+const {
+  idleLines,
+  clickLines,
+  pick,
+  pageComment,
+  replyToUser
+} = require('./lib/commentary');
+
+const WINDOW_WIDTH = 330;
+const WINDOW_HEIGHT = 430;
+const WANDER_MIN_MS = 18000;
+const WANDER_MAX_MS = 42000;
+const IDLE_COMMENT_MS = 36000;
+
+let petWindow = null;
+let store = null;
+let observer = null;
+let character = loadCharacterProfile(__dirname);
+let inboxReader = null;
+let pageContext = null;
+let panelOpen = false;
+let isDragging = false;
+let isMoving = false;
+let wanderTimer = null;
+let idleTimer = null;
+let inboxTimer = null;
+let persistTimer = null;
+
+if (process.platform === 'darwin') {
+  app.setName(character.name);
+}
+
+app.whenReady().then(() => {
+  const settingsPath = process.env.DESKTOP_COMPANION_SMOKE === '1'
+    ? path.join(process.cwd(), '.artifacts', 'smoke-settings-' + process.pid + '.json')
+    : path.join(app.getPath('userData'), 'settings.json');
+  store = new SettingsStore(settingsPath);
+  store.load();
+  inboxReader = new InboxReader(path.join(path.dirname(settingsPath), 'inbox.jsonl'));
+  observer = new PageObserver();
+
+  if (process.platform === 'darwin' && app.dock) app.dock.hide();
+
+  createWindow();
+  registerIpc();
+  applyLoginSetting(store.get().launchAtLogin);
+  scheduleWander();
+  scheduleIdleComments();
+  scheduleInbox();
+});
+
+app.on('window-all-closed', () => app.quit());
+
+function createWindow() {
+  const settings = store.get();
+  const bounds = initialBounds(settings.windowPosition);
+
+  petWindow = new BrowserWindow({
+    ...bounds,
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    transparent: true,
+    backgroundColor: '#00000000',
+    frame: false,
+    resizable: false,
+    movable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    hasShadow: false,
+    alwaysOnTop: settings.alwaysOnTop,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false
+    }
+  });
+
+  petWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  petWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  installSmokeCapture();
+  petWindow.once('ready-to-show', () => petWindow.showInactive());
+  petWindow.on('moved', persistPosition);
+  petWindow.on('closed', () => {
+    petWindow = null;
+    clearTimeout(wanderTimer);
+    clearInterval(idleTimer);
+    clearInterval(inboxTimer);
+  });
+}
+
+function installSmokeCapture() {
+  if (process.env.DESKTOP_COMPANION_SMOKE !== '1') return;
+
+  petWindow.webContents.once('did-finish-load', async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const ui = await petWindow.webContents.executeJavaScript(`
+      ({
+        title: document.title,
+        avatarLoaded: document.getElementById('avatar').complete,
+        avatarWidth: document.getElementById('avatar').naturalWidth,
+        speech: document.getElementById('speechText').textContent,
+        panelHidden: document.getElementById('panel').hidden,
+        pageSightChecked: document.getElementById('observePages').checked
+      })
+    `);
+    const image = await petWindow.capturePage();
+    const artifactDir = path.join(process.cwd(), '.artifacts');
+    const imagePath = path.join(artifactDir, 'desktop-vesper-smoke.png');
+    fs.mkdirSync(artifactDir, { recursive: true });
+    fs.writeFileSync(imagePath, image.toPNG());
+    process.stdout.write('[smoke] ' + JSON.stringify({
+      ...ui,
+      imagePath
+    }) + '\n');
+    app.quit();
+  });
+}
+
+function initialBounds(saved) {
+  if (saved) return { x: saved.x, y: saved.y };
+
+  const display = screen.getPrimaryDisplay();
+  const area = display.workArea;
+  return {
+    x: area.x + area.width - WINDOW_WIDTH - 28,
+    y: area.y + area.height - WINDOW_HEIGHT - 18
+  };
+}
+
+function registerIpc() {
+  ipcMain.handle('pet:get-state', () => ({
+    settings: store.get(),
+    character,
+    pageContext,
+    version: app.getVersion()
+  }));
+
+  ipcMain.handle('pet:react', () => {
+    const line = pageContext && store.get().observePages && Math.random() > 0.55
+      ? pageComment(pageContext)
+      : pick(character.clickLines || clickLines);
+    sendComment(line, 'click');
+    return line;
+  });
+
+  ipcMain.handle('pet:ask', async (_event, message) => {
+    let context = pageContext;
+    if (/page|reading|looking|website/i.test(String(message)) && store.get().observePages) {
+      context = await observePage();
+    }
+
+    const line = replyToUser(message, context, character);
+    sendComment(line, 'reply');
+
+    if (/move|wander|walk|other side/i.test(String(message))) {
+      setTimeout(() => wanderNow(true), 350);
+    }
+
+    if (/quiet|hush|shh|stop talking/i.test(String(message))) {
+      store.update({ idleComments: false });
+      petWindow.webContents.send('pet:comment', {
+        text: line,
+        kind: 'settings',
+        settings: store.get()
+      });
+    }
+
+    return { line, settings: store.get(), pageContext: context };
+  });
+
+  ipcMain.handle('pet:observe-now', async () => {
+    if (!store.get().observePages) {
+      return {
+        context: null,
+        line: 'Page sight is off. Turn it on first; I do not peer through closed doors.'
+      };
+    }
+    const context = await observePage();
+    const line = pageComment(context);
+    sendComment(line, 'page');
+    return { context, line };
+  });
+
+  ipcMain.handle('pet:update-settings', (_event, patch) => {
+    const before = store.get();
+    const settings = store.update(patch || {});
+
+    if (before.alwaysOnTop !== settings.alwaysOnTop && petWindow) {
+      petWindow.setAlwaysOnTop(settings.alwaysOnTop);
+    }
+    if (before.launchAtLogin !== settings.launchAtLogin) {
+      applyLoginSetting(settings.launchAtLogin);
+    }
+    if (!before.wander && settings.wander) scheduleWander();
+    if (before.wander && !settings.wander) clearTimeout(wanderTimer);
+    if (!before.observePages && settings.observePages) {
+      observePage().then((context) => sendComment(pageComment(context), 'page'));
+    }
+    if (before.observePages && !settings.observePages) pageContext = null;
+
+    return settings;
+  });
+
+  ipcMain.handle('pet:open-privacy-settings', () =>
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation')
+  );
+
+  ipcMain.on('pet:panel-open', (_event, open) => {
+    panelOpen = open;
+  });
+
+  ipcMain.on('pet:ignore-mouse', (_event, ignore) => {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    petWindow.setIgnoreMouseEvents(ignore, { forward: true });
+  });
+
+  ipcMain.on('pet:drag-by', (_event, delta) => {
+    if (!petWindow || isMoving) return;
+    const dx = Number(delta && delta.dx);
+    const dy = Number(delta && delta.dy);
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    isDragging = true;
+    const [x, y] = petWindow.getPosition();
+    petWindow.setPosition(Math.round(x + dx), Math.round(y + dy), false);
+  });
+
+  ipcMain.on('pet:drag-end', () => {
+    isDragging = false;
+    persistPosition();
+  });
+
+  ipcMain.on('pet:quit', () => app.quit());
+}
+
+async function observePage() {
+  pageContext = await observer.observe();
+  return pageContext;
+}
+
+function sendComment(text, kind) {
+  if (!petWindow || petWindow.isDestroyed() || !text) return;
+  petWindow.webContents.send('pet:comment', { text, kind });
+}
+
+function scheduleIdleComments() {
+  clearInterval(idleTimer);
+  idleTimer = setInterval(async () => {
+    const settings = store.get();
+    if (!settings.idleComments || panelOpen || isDragging || isMoving) return;
+
+    if (settings.observePages && (!pageContext || Math.random() > 0.55)) {
+      await observePage();
+    }
+
+    const line = settings.observePages && pageContext && Math.random() > 0.45
+      ? pageComment(pageContext)
+      : pick(character.idleLines || idleLines);
+    sendComment(line, 'idle');
+  }, IDLE_COMMENT_MS);
+}
+
+function scheduleInbox() {
+  clearInterval(inboxTimer);
+  inboxTimer = setInterval(() => {
+    try {
+      const messages = inboxReader.poll();
+      for (const text of messages) sendComment(text, 'scheduled');
+    } catch (error) {
+      console.warn('[inbox] read failed:', error.message);
+    }
+  }, 1500);
+}
+
+function scheduleWander() {
+  clearTimeout(wanderTimer);
+  if (!store || !store.get().wander) return;
+
+  const delay = WANDER_MIN_MS + Math.round(Math.random() * (WANDER_MAX_MS - WANDER_MIN_MS));
+  wanderTimer = setTimeout(async () => {
+    await wanderNow(false);
+    scheduleWander();
+  }, delay);
+}
+
+async function wanderNow(userRequested) {
+  if (!petWindow || isMoving || isDragging || panelOpen || !store.get().wander && !userRequested) {
+    return;
+  }
+
+  const current = petWindow.getBounds();
+  const display = screen.getDisplayNearestPoint({
+    x: current.x + Math.round(current.width / 2),
+    y: current.y + Math.round(current.height / 2)
+  });
+  const area = display.workArea;
+  const margin = 12;
+  const maxX = area.x + area.width - WINDOW_WIDTH - margin;
+  const maxY = area.y + area.height - WINDOW_HEIGHT - margin;
+  const targetX = clamp(
+    current.x + Math.round((Math.random() - 0.5) * 520),
+    area.x + margin,
+    maxX
+  );
+  const targetY = clamp(
+    current.y + Math.round((Math.random() - 0.5) * 260),
+    area.y + margin,
+    maxY
+  );
+
+  await animateWindow(current.x, current.y, targetX, targetY, 1200);
+  persistPosition();
+}
+
+function animateWindow(fromX, fromY, toX, toY, duration) {
+  return new Promise((resolve) => {
+    isMoving = true;
+    if (petWindow) petWindow.webContents.send('pet:moving', true);
+    const started = Date.now();
+
+    const frame = () => {
+      if (!petWindow || petWindow.isDestroyed()) {
+        isMoving = false;
+        resolve();
+        return;
+      }
+
+      const progress = Math.min(1, (Date.now() - started) / duration);
+      const eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      petWindow.setPosition(
+        Math.round(fromX + (toX - fromX) * eased),
+        Math.round(fromY + (toY - fromY) * eased),
+        false
+      );
+
+      if (progress < 1) {
+        setTimeout(frame, 16);
+      } else {
+        isMoving = false;
+        petWindow.webContents.send('pet:moving', false);
+        resolve();
+      }
+    };
+
+    frame();
+  });
+}
+
+function persistPosition() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    if (!petWindow || petWindow.isDestroyed()) return;
+    const [x, y] = petWindow.getPosition();
+    store.update({ windowPosition: { x, y } });
+  }, 180);
+}
+
+function applyLoginSetting(enabled) {
+  if (!app.isPackaged) return;
+  app.setLoginItemSettings({
+    openAtLogin: Boolean(enabled),
+    path: process.execPath
+  });
+}
+
+function showContextMenu() {
+  if (!petWindow) return;
+  const settings = store.get();
+  const menu = Menu.buildFromTemplate([
+    {
+      label: settings.wander ? 'Pause wandering' : 'Resume wandering',
+      click: () => {
+        const next = store.update({ wander: !settings.wander });
+        if (next.wander) scheduleWander();
+        else clearTimeout(wanderTimer);
+      }
+    },
+    {
+      label: settings.idleComments ? 'Quiet mode' : 'Resume comments',
+      click: () => store.update({ idleComments: !settings.idleComments })
+    },
+    {
+      label: settings.observePages ? 'Close page sight' : 'Open page sight',
+      click: () => store.update({ observePages: !settings.observePages })
+    },
+    { type: 'separator' },
+    { label: 'Quit ' + character.name, click: () => app.quit() }
+  ]);
+  menu.popup({ window: petWindow });
+}
+
+ipcMain.on('pet:context-menu', showContextMenu);
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}

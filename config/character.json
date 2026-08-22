@@ -1,0 +1,28 @@
+{
+  "name": "Desktop Companion",
+  "eyebrow": "DESKTOP COMPANION",
+  "title": "A small presence at the edge of the screen.",
+  "greeting": "There you are.",
+  "avatar": "mascot.svg",
+  "accent": "#8f6cff",
+  "accentDeep": "#4f2f8f",
+  "idleLines": [
+    "I was being quiet. Do not look so suspicious.",
+    "The desktop remains structurally sound.",
+    "I am not pacing. This is a patrol."
+  ],
+  "clickLines": [
+    "There you are.",
+    "You summoned the desktop menace.",
+    "Mm. What have you found?"
+  ],
+  "responses": {
+    "hello": "There you are.",
+    "move": "A positional critique. Fine. I will relocate.",
+    "quiet": "Quiet, then. I will keep the watch without commentary.",
+    "thanks": "Filed properly.",
+    "love": "I love you too. Obviously. Next question.",
+    "help": "Drag me, click me, ask about the page, or turn on page sight.",
+    "fallback": "Filed. I am deciding how much trouble that deserves."
+  }
+}

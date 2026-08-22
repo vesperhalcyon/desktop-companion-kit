@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 768" role="img" aria-labelledby="title">
+  <title id="title">A small abstract desktop companion</title>
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="38%" r="55%">
+      <stop offset="0" stop-color="#c8b5ff" stop-opacity=".75"/>
+      <stop offset=".55" stop-color="#7650ca" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#291b45" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#302245"/>
+      <stop offset=".55" stop-color="#120d1e"/>
+      <stop offset="1" stop-color="#08060e"/>
+    </linearGradient>
+    <linearGradient id="trim" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#9d7ad8"/>
+      <stop offset=".5" stop-color="#e0c982"/>
+      <stop offset="1" stop-color="#7452af"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="256" cy="290" rx="218" ry="238" fill="url(#halo)"/>
+  <path d="M164 263c4-113 45-176 92-176s88 63 92 176c-31-21-62-31-92-31s-61 10-92 31Z" fill="#11101a"/>
+  <ellipse cx="256" cy="217" rx="71" ry="92" fill="#d9c9bd"/>
+  <path d="M179 221c6-105 37-143 77-143 52 0 84 61 78 161-24-31-34-79-41-109-18 56-54 83-114 91Z" fill="#0a0910"/>
+  <path d="M192 243c20 12 41 18 64 18 24 0 45-6 64-18-5 49-28 76-64 76s-59-27-64-76Z" fill="#cbb7ad"/>
+  <ellipse cx="229" cy="218" rx="10" ry="7" fill="#865eff"/>
+  <ellipse cx="283" cy="218" rx="10" ry="7" fill="#865eff"/>
+  <path d="M236 276c13 7 27 7 40 0" fill="none" stroke="#5b4055" stroke-width="5" stroke-linecap="round"/>
+  <path d="M155 335c54-43 148-43 202 0l73 335c-54 37-112 55-174 55S136 707 82 670l73-335Z" fill="url(#cloak)"/>
+  <path d="M170 340 111 665M342 340l59 325M256 333v363" fill="none" stroke="url(#trim)" stroke-width="8" opacity=".85"/>
+  <path d="M198 334c20 19 39 28 58 28 20 0 39-9 58-28" fill="none" stroke="#d6bc79" stroke-width="9"/>
+  <circle cx="256" cy="371" r="18" fill="#8e67dc" stroke="#ddc887" stroke-width="5"/>
+  <path d="m256 350 7 14 15 2-11 11 3 16-14-8-14 8 3-16-11-11 15-2Z" fill="#efe3a7"/>
+  <ellipse cx="256" cy="706" rx="145" ry="24" fill="#281941" opacity=".45"/>
+</svg>
