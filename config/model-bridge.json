@@ -1,0 +1,20 @@
+{
+  "enabled": false,
+  "command": "openclaw",
+  "args": [
+    "agent",
+    "--agent",
+    "default",
+    "--session-key",
+    "agent:default:desktop-companion",
+    "--model",
+    "provider/model",
+    "--thinking",
+    "low",
+    "--timeout",
+    "45",
+    "--json"
+  ],
+  "timeoutMs": 60000,
+  "maxReplyChars": 600
+}

@@ -15,12 +15,14 @@ const { SettingsStore } = require('./lib/settings-store');
 const { loadCharacterProfile } = require('./lib/character-profile');
 const { InboxReader } = require('./lib/inbox');
 const { PageObserver } = require('./lib/page-observer');
+const { ModelBridge, loadModelBridgeConfig } = require('./lib/model-bridge');
 const {
   idleLines,
   clickLines,
   pick,
   pageComment,
-  replyToUser
+  replyToUser,
+  isPageIntent
 } = require('./lib/commentary');
 
 const WINDOW_WIDTH = 330;
@@ -32,6 +34,7 @@ const IDLE_COMMENT_MS = 36000;
 let petWindow = null;
 let store = null;
 let observer = null;
+let modelBridge = null;
 let character = loadCharacterProfile(__dirname);
 let inboxReader = null;
 let pageContext = null;
@@ -55,6 +58,12 @@ app.whenReady().then(() => {
   store.load();
   inboxReader = new InboxReader(path.join(path.dirname(settingsPath), 'inbox.jsonl'));
   observer = new PageObserver();
+  const bridgeConfig = loadModelBridgeConfig(__dirname);
+  if (process.env.DESKTOP_COMPANION_SMOKE === '1'
+      && process.env.DESKTOP_COMPANION_SMOKE_MODEL !== '1') {
+    bridgeConfig.enabled = false;
+  }
+  modelBridge = new ModelBridge(bridgeConfig);
 
   if (process.platform === 'darwin' && app.dock) app.dock.hide();
 
@@ -114,16 +123,33 @@ function installSmokeCapture() {
 
   petWindow.webContents.once('did-finish-load', async () => {
     await new Promise((resolve) => setTimeout(resolve, 1100));
+    const modelSmoke = process.env.DESKTOP_COMPANION_SMOKE_MODEL === '1';
+    const pageSmoke = process.env.DESKTOP_COMPANION_SMOKE_PAGE === '1';
+    if (pageSmoke) store.update({ observePages: true });
+    const smokeMessage = modelSmoke
+      ? 'Reply with exactly this marker and nothing else: DEEPSEEK_DESKTOP_OK'
+      : pageSmoke
+        ? 'Can you see the page?'
+        : 'smoke interaction line';
     await petWindow.webContents.executeJavaScript(`
       document.getElementById('settingsButton').click();
-      document.getElementById('askInput').value = 'smoke interaction line';
+      document.getElementById('askInput').value = ${JSON.stringify(smokeMessage)};
       document.getElementById('askInput').dispatchEvent(new KeyboardEvent('keydown', {
         key: 'Enter',
         bubbles: true,
         cancelable: true
       }));
     `);
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const attempts = modelSmoke ? 60 : 10;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const complete = await petWindow.webContents.executeJavaScript(`
+        document.getElementById('panel').hidden
+          && !document.getElementById('speech').hidden
+          && Boolean(document.getElementById('speechText').textContent.trim())
+      `);
+      if (complete) break;
+      await new Promise((resolve) => setTimeout(resolve, modelSmoke ? 1000 : 100));
+    }
     const ui = await petWindow.webContents.executeJavaScript(`
       ({
         title: document.title,
@@ -152,6 +178,12 @@ function installSmokeCapture() {
     const image = await petWindow.capturePage();
     if (!ui.panelHidden || ui.speechHidden || !ui.speech.trim()) {
       throw new Error('Typed interaction did not produce a visible reply');
+    }
+    if (modelSmoke && !ui.speech.includes('DEEPSEEK_DESKTOP_OK')) {
+      throw new Error('Model-backed interaction did not return the expected marker');
+    }
+    if (pageSmoke && !/^Yes\. I can see/.test(ui.speech)) {
+      throw new Error('Page-aware interaction did not report visible page content');
     }
     const artifactDir = path.join(process.cwd(), '.artifacts');
     const imagePath = path.join(artifactDir, 'desktop-vesper-smoke.png');
@@ -182,7 +214,8 @@ function registerIpc() {
     settings: store.get(),
     character,
     pageContext,
-    version: app.getVersion()
+    version: app.getVersion(),
+    modelEnabled: modelBridge.enabled
   }));
 
   ipcMain.handle('pet:react', () => {
@@ -194,18 +227,32 @@ function registerIpc() {
   });
 
   ipcMain.handle('pet:ask', async (_event, message) => {
+    const text = String(message || '');
+    const pageIntent = isPageIntent(text);
+    const localCommand = /move|wander|walk|other side|quiet|hush|shh|stop talking/i
+      .test(text);
     let context = pageContext;
-    if (/page|reading|looking|website/i.test(String(message)) && store.get().observePages) {
+    if (pageIntent && store.get().observePages) {
       context = await observePage();
     }
 
-    const line = replyToUser(message, context, character);
+    let line = '';
+    if (pageIntent || localCommand || !modelBridge.enabled) {
+      line = replyToUser(text, context, character);
+    } else {
+      try {
+        line = await modelBridge.ask(text);
+      } catch (error) {
+        console.warn('[model-bridge] reply failed:', error.message);
+        line = 'I heard you, but DeepSeek did not answer the little window. Try me once more.';
+      }
+    }
 
-    if (/move|wander|walk|other side/i.test(String(message))) {
+    if (/move|wander|walk|other side/i.test(text)) {
       setTimeout(() => wanderNow(true), 350);
     }
 
-    if (/quiet|hush|shh|stop talking/i.test(String(message))) {
+    if (/quiet|hush|shh|stop talking/i.test(text)) {
       store.update({ idleComments: false });
     }
 

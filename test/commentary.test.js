@@ -8,6 +8,9 @@ const {
   classify,
   pageComment,
   replyToUser,
+  isPageIntent,
+  isPageVisibilityQuestion,
+  pageVisibilityReply,
   cleanTitle
 } = require('../lib/commentary');
 
@@ -42,6 +45,25 @@ test('replyToUser understands core desktop-pet intents', () => {
   assert.match(replyToUser('Hello'), /There you are/);
   assert.match(replyToUser('What can you do?'), /Drag me/);
   assert.match(replyToUser('Please move'), /relocate/);
+});
+
+test('page intent stays on the local observation path', () => {
+  assert.equal(isPageIntent('Can you see the page?'), true);
+  assert.equal(isPageVisibilityQuestion('Can you read this website?'), true);
+  assert.equal(isPageIntent('Tell me something about yourself.'), false);
+});
+
+test('page visibility replies report observed content precisely', () => {
+  const context = {
+    ok: true,
+    app: 'Google Chrome',
+    title: 'Example page',
+    text: 'visible page text'
+  };
+  const reply = pageVisibilityReply(context);
+  assert.match(reply, /^Yes\. I can see "Example page" in Google Chrome/);
+  assert.match(reply, /17 characters of visible page text/);
+  assert.equal(replyToUser('Can you see the page?', context), reply);
 });
 
 test('cleanTitle bounds untrusted page titles', () => {

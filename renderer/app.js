@@ -12,6 +12,7 @@ const settingsButton = document.getElementById('settingsButton');
 const closePanelButton = document.getElementById('closePanel');
 const askForm = document.getElementById('askForm');
 const askInput = document.getElementById('askInput');
+const askButton = document.getElementById('askButton');
 const pageButton = document.getElementById('pageButton');
 const moveButton = document.getElementById('moveButton');
 const privacyButton = document.getElementById('privacyButton');
@@ -121,6 +122,9 @@ function wireEvents() {
     const message = askInput.value.trim();
     if (!message) return;
     askInput.value = '';
+    askInput.disabled = true;
+    askButton.disabled = true;
+    askButton.textContent = 'Thinking…';
     try {
       const result = await api.ask(message);
       applySettings(result.settings);
@@ -129,6 +133,10 @@ function wireEvents() {
     } catch {
       setPanel(false);
       showSpeech('I caught the words, but the reply path failed. Try me once more.', 'error');
+    } finally {
+      askInput.disabled = false;
+      askButton.disabled = false;
+      askButton.textContent = 'Ask';
     }
   });
 
