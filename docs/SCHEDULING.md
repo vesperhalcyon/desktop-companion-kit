@@ -1,8 +1,9 @@
 # Scheduled speech
 
-The app watches a local inbox:
+The app watches a local inbox.
 
-`~/Library/Application Support/<character name>/inbox.jsonl`
+- macOS: `~/Library/Application Support/<character name>/inbox.jsonl`
+- Windows: `%APPDATA%\<character name>\inbox.jsonl`
 
 Write a line with:
 
@@ -14,4 +15,4 @@ For a differently named public character, set `DESKTOP_COMPANION_APP_NAME` to th
 
 Each entry is JSONL with bounded text, a timestamp, and a source label. The app polls locally, ignores malformed or stale entries, and shows each recent line once.
 
-Any scheduler can call the script. If an LLM generates lines, keep model access separate from Page sight: the bundled app never sends page content to the scheduler.
+Any scheduler can call the script: launchd/cron on macOS or Task Scheduler on Windows. If an LLM generates lines, keep model access separate from Page sight: the bundled app never sends page observations to the scheduler.

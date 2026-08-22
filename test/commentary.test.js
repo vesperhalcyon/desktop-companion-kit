@@ -66,6 +66,20 @@ test('page visibility replies report observed content precisely', () => {
   assert.equal(replyToUser('Can you see the page?', context), reply);
 });
 
+test('page visibility is explicit about Windows title-only sight', () => {
+  const reply = pageVisibilityReply({
+    ok: true,
+    platform: 'win32',
+    capability: 'title',
+    app: 'Google Chrome',
+    title: 'Example page',
+    url: '',
+    text: ''
+  });
+  assert.match(reply, /window title/);
+  assert.match(reply, /does not read the page body/);
+});
+
 test('cleanTitle bounds untrusted page titles', () => {
   const title = cleanTitle('x'.repeat(200));
   assert.equal(title.length, 82);

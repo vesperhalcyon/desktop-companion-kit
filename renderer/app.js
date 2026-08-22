@@ -16,6 +16,7 @@ const askForm = document.getElementById('askForm');
 const askInput = document.getElementById('askInput');
 const askButton = document.getElementById('askButton');
 const pageButton = document.getElementById('pageButton');
+const pageSightDetail = document.getElementById('pageSightDetail');
 const moveButton = document.getElementById('moveButton');
 const privacyButton = document.getElementById('privacyButton');
 const quitButton = document.getElementById('quitButton');
@@ -56,6 +57,7 @@ async function boot() {
   const state = await api.getState();
   applyCharacter(state.character);
   applySettings(state.settings);
+  applyPlatform(state);
   wireEvents();
   api.onComment((payload) => {
     if (payload.settings) applySettings(payload.settings);
@@ -72,6 +74,21 @@ async function boot() {
   );
   scheduleIdleGesture();
   setTimeout(() => showSpeech(state.character.greeting, 'hello'), 650);
+}
+
+function applyPlatform(state) {
+  if (state.platform === 'darwin') {
+    pageSightDetail.textContent = 'Reads the active tab locally';
+    privacyButton.textContent = 'macOS privacy settings';
+    return;
+  }
+  if (state.platform === 'win32') {
+    pageSightDetail.textContent = 'Reads the browser window title locally';
+    privacyButton.textContent = 'Windows privacy settings';
+    return;
+  }
+  pageSightDetail.textContent = 'Unavailable on this operating system';
+  privacyButton.textContent = 'Privacy settings';
 }
 
 function applyCharacter(character) {

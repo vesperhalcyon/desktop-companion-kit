@@ -46,9 +46,7 @@ let idleTimer = null;
 let inboxTimer = null;
 let persistTimer = null;
 
-if (process.platform === 'darwin') {
-  app.setName(character.name);
-}
+app.setName(character.name);
 
 app.whenReady().then(() => {
   const settingsPath = process.env.DESKTOP_COMPANION_SMOKE === '1'
@@ -57,7 +55,7 @@ app.whenReady().then(() => {
   store = new SettingsStore(settingsPath);
   store.load();
   inboxReader = new InboxReader(path.join(path.dirname(settingsPath), 'inbox.jsonl'));
-  observer = new PageObserver();
+  observer = new PageObserver({ platform: process.platform });
   const bridgeConfig = loadModelBridgeConfig(__dirname);
   if (process.env.DESKTOP_COMPANION_SMOKE === '1'
       && process.env.DESKTOP_COMPANION_SMOKE_MODEL !== '1') {
@@ -177,12 +175,14 @@ function installSmokeCapture() {
       const context = await observePage();
       pageProbe = {
         ok: context.ok,
+        platform: context.platform,
+        capability: context.capability,
         app: context.app,
         hasText: Boolean(context.text),
         textLength: context.text.length,
         permissionHint: context.permissionHint
       };
-      if (!pageProbe.ok || !pageProbe.hasText) {
+      if (!pageProbe.ok || pageProbe.capability !== 'content' || !pageProbe.hasText) {
         throw new Error('Page sight did not read visible browser content');
       }
     }
@@ -232,6 +232,8 @@ function registerIpc() {
     character,
     pageContext,
     version: app.getVersion(),
+    platform: process.platform,
+    pageCapability: observer.capability,
     modelEnabled: modelBridge.enabled
   }));
 
@@ -309,9 +311,7 @@ function registerIpc() {
     return settings;
   });
 
-  ipcMain.handle('pet:open-privacy-settings', () =>
-    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Automation')
-  );
+  ipcMain.handle('pet:open-privacy-settings', () => openPrivacySettings());
 
   ipcMain.on('pet:panel-open', (_event, open) => {
     panelOpen = open;
@@ -484,6 +484,18 @@ function applyLoginSetting(enabled) {
     openAtLogin: Boolean(enabled),
     path: process.execPath
   });
+}
+
+function openPrivacySettings() {
+  if (process.platform === 'darwin') {
+    return shell.openExternal(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'
+    );
+  }
+  if (process.platform === 'win32') {
+    return shell.openExternal('ms-settings:privacy');
+  }
+  return Promise.resolve(false);
 }
 
 function showContextMenu() {

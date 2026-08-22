@@ -1,6 +1,6 @@
 # Desktop Companion Kit
 
-A configurable transparent macOS desktop companion: draggable, independently wandering, clickable, conversational, able to observe the active browser tab when explicitly invited, and able to receive scheduled lines through a local inbox.
+A configurable transparent macOS and Windows desktop companion: draggable, independently wandering, animated, clickable, conversational, locally page-aware when explicitly invited, and able to receive scheduled lines through a local inbox.
 
 ## What the MVP does
 
@@ -11,18 +11,18 @@ A configurable transparent macOS desktop companion: draggable, independently wan
 - Reacts to clicks and accepts short typed prompts.
 - Can optionally route ordinary typed conversation to a configured model bridge. The bridge is off by default.
 - Makes optional idle comments.
-- Offers **Page sight**, off by default. When enabled, it asks macOS Automation for the active browser tab title, URL, and up to 3,500 characters of visible text. Processing is local.
+- Offers **Page sight**, off by default. macOS can read the active browser tab title, URL, and bounded visible text. Windows reads the browser window title only. Processing remains local.
 - Persists privacy, movement, and window-position settings.
 - Can open at login after the app is packaged.
 - Accepts bounded scheduled speech through a local JSONL inbox.
 
 ## Privacy model
 
-Page sight is opt-in, visible, and reversible. When it is off, the app does not ask the browser or System Events for page information. When it is on, page content is processed locally by the bundled commentary engine and is not transmitted—even when the optional model bridge is enabled.
+Page sight is opt-in, visible, capability-aware, and reversible. When it is off, the app does not query the browser. When it is on, observations are processed locally by the bundled commentary engine and are not transmitted—even when the optional model bridge is enabled.
 
 The model bridge has a separate boundary. If enabled, only text entered into the companion's text box is sent to the configured model command. The public configuration is disabled by default, and the local override that enables a real account is ignored by Git.
 
-macOS may request Automation permission for the companion to access System Events and the active browser. Some browsers also require their **Allow JavaScript from Apple Events** developer option before visible page text is available. Without it, the app falls back to title and URL.
+On macOS, Automation permission and a browser's **Allow JavaScript from Apple Events** option may be required for content-level sight. Windows uses local PowerShell/Win32 window inspection and deliberately exposes title-only sight without a browser extension or debug port.
 
 ## Run from source
 
@@ -45,15 +45,18 @@ npm run check
 ## Package as an app
 
 ```sh
-npm run package
+npm run package:mac
+npm run package:windows
 ```
 
-The packaged app is written under `.artifacts/`. Override the bundle name with `DESKTOP_COMPANION_NAME`.
+The unpacked apps are written under `.artifacts/`. `npm run package` packages for the current supported host. Override the bundle name with `DESKTOP_COMPANION_NAME` and the default architecture with `DESKTOP_COMPANION_ARCH`.
 
 ## Customize and schedule
 
 - [Character profile guide](docs/CUSTOMIZING.md)
 - [Scheduled speech and local inbox](docs/SCHEDULING.md)
+- [Windows setup](docs/WINDOWS.md)
+- [Host/addon integration](docs/INTEGRATION.md)
 - [Security and privacy](SECURITY.md)
 
 Private character overrides belong in `config/character.local.json`, which is intentionally ignored by Git.
@@ -66,7 +69,8 @@ To enable model-backed typed conversation, copy `config/model-bridge.json` to `c
 - `preload.js`: narrow isolated renderer bridge.
 - `lib/character-profile.js`: public profile plus ignored local override.
 - `lib/inbox.js`: bounded local scheduled-speech transport.
-- `lib/page-observer.js`: local macOS Automation adapter.
+- `lib/page-observer.js`: capability-aware macOS and Windows local observers.
+- `lib/platform-paths.js`: native app-data locations for scripts and schedulers.
 - `lib/commentary.js`: deterministic local voice for the first version.
 - `lib/model-bridge.js`: optional bounded `execFile` adapter for model-backed typed chat.
 - `renderer/`: transparent UI, controls, drag interaction, and reduced-motion-aware character gestures.
