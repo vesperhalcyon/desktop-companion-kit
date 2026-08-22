@@ -118,6 +118,7 @@ function wireEvents() {
     const result = await api.ask(message);
     applySettings(result.settings);
     setPanel(false);
+    showSpeech(result.line, 'reply');
   });
 
   pageButton.addEventListener('click', async () => {
@@ -132,8 +133,9 @@ function wireEvents() {
   });
 
   moveButton.addEventListener('click', async () => {
-    await api.ask('Move to another part of the screen.');
+    const result = await api.ask('Move to another part of the screen.');
     setPanel(false);
+    showSpeech(result.line, 'reply');
   });
 
   for (const id of settingIds) {

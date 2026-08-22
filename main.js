@@ -114,6 +114,12 @@ function installSmokeCapture() {
 
   petWindow.webContents.once('did-finish-load', async () => {
     await new Promise((resolve) => setTimeout(resolve, 1100));
+    await petWindow.webContents.executeJavaScript(`
+      document.getElementById('settingsButton').click();
+      document.getElementById('askInput').value = 'smoke interaction line';
+      document.getElementById('askForm').requestSubmit();
+    `);
+    await new Promise((resolve) => setTimeout(resolve, 500));
     const ui = await petWindow.webContents.executeJavaScript(`
       ({
         title: document.title,
@@ -121,10 +127,14 @@ function installSmokeCapture() {
         avatarWidth: document.getElementById('avatar').naturalWidth,
         speech: document.getElementById('speechText').textContent,
         panelHidden: document.getElementById('panel').hidden,
+        speechHidden: document.getElementById('speech').hidden,
         pageSightChecked: document.getElementById('observePages').checked
       })
     `);
     const image = await petWindow.capturePage();
+    if (!ui.panelHidden || ui.speechHidden || !ui.speech.trim()) {
+      throw new Error('Typed interaction did not produce a visible reply');
+    }
     const artifactDir = path.join(process.cwd(), '.artifacts');
     const imagePath = path.join(artifactDir, 'desktop-vesper-smoke.png');
     fs.mkdirSync(artifactDir, { recursive: true });
@@ -171,7 +181,6 @@ function registerIpc() {
     }
 
     const line = replyToUser(message, context, character);
-    sendComment(line, 'reply');
 
     if (/move|wander|walk|other side/i.test(String(message))) {
       setTimeout(() => wanderNow(true), 350);
@@ -179,11 +188,6 @@ function registerIpc() {
 
     if (/quiet|hush|shh|stop talking/i.test(String(message))) {
       store.update({ idleComments: false });
-      petWindow.webContents.send('pet:comment', {
-        text: line,
-        kind: 'settings',
-        settings: store.get()
-      });
     }
 
     return { line, settings: store.get(), pageContext: context };
