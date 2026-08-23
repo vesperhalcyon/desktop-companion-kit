@@ -609,8 +609,8 @@ button {
   position: absolute;
   z-index: 1;
   bottom: -10px;
-  width: 14px;
-  height: 44px;
+  width: 12px;
+  height: 20px;
   border: 2px solid rgba(115, 93, 156, 0.58);
   border-top: 0;
   border-radius: 0 0 8px 8px;
@@ -618,8 +618,8 @@ button {
   box-shadow: 0 7px 5px rgba(0, 0, 0, 0.42);
 }
 
-.watchForeground::before { left: 48px; transform: rotate(3deg); }
-.watchForeground::after { right: 48px; transform: rotate(-3deg); }
+.watchForeground::before { left: 50px; transform: rotate(3deg); }
+.watchForeground::after { right: 50px; transform: rotate(-3deg); }
 
 .avatarWrap.watching {
   animation: none;
