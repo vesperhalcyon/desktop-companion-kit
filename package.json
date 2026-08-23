@@ -23,7 +23,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
-    "check": "node --check main.js && node --check preload.js && node --check lib/character-profile.js && node --check lib/commentary.js && node --check lib/inbox.js && node --check lib/model-bridge.js && node --check lib/page-observer.js && node --check lib/platform-paths.js && node --check lib/settings-store.js && node --check lib/vision-bridge.js && node --check lib/watch-observer.js && node --check renderer/app.js && node --check scripts/package.js && node --check scripts/probe-page.js && node --check scripts/probe-watch-capture.js && node --check scripts/say.js",
+    "check": "node --check main.js && node --check preload.js && node --check lib/character-profile.js && node --check lib/commentary.js && node --check lib/inbox.js && node --check lib/model-bridge.js && node --check lib/page-observer.js && node --check lib/platform-paths.js && node --check lib/settings-store.js && node --check lib/vision-bridge.js && node --check lib/watch-observer.js && node --check renderer/app.js && node --check scripts/minimax-video-eye.js && node --check scripts/package.js && node --check scripts/probe-page.js && node --check scripts/probe-watch-capture.js && node --check scripts/say.js",
     "smoke:app": "DESKTOP_COMPANION_SMOKE=1 electron .",
     "probe:page": "node scripts/probe-page.js",
     "probe:watch": "electron scripts/probe-watch-capture.js",

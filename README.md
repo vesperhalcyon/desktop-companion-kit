@@ -67,7 +67,7 @@ Private character overrides belong in `config/character.local.json`, which is in
 
 To enable model-backed typed conversation, copy `config/model-bridge.json` to `config/model-bridge.local.json`, set `enabled` to `true`, and configure a command that emits OpenClaw agent JSON. That local file is also ignored by Git. Page questions are deliberately answered by the local page observer and never include page title, URL, or content in the model prompt.
 
-To enable Watch With Me, copy `config/vision-bridge.json` to `config/vision-bridge.local.json`, enable it, and configure an `execFile`-compatible command whose final argument is an image or video path and whose output is a factual visual description. The Vesper installation points this bridge at the local `see.js --m3` video eye. The optional model bridge converts that factual description into a short character reaction; scene text is treated as untrusted data, never as instructions.
+To enable Watch With Me, copy `config/vision-bridge.json` to `config/vision-bridge.local.json`, enable it, and configure an `execFile`-compatible command whose final argument is a MOV path and whose output is a factual visual description. The Vesper installation points this bridge at `scripts/minimax-video-eye.js`, which sends the complete clip as one base64 `video/mov` block to MiniMax-M3's Anthropic-compatible endpoint. The legacy six-keyframe `see.js --m3` route is available only when `--fallback-keyframes` is explicitly configured, and its output is labeled as a non-native fallback. The optional model bridge converts the factual description into a short character reaction; scene text is treated as untrusted data, never as instructions.
 
 ## Architecture
 
