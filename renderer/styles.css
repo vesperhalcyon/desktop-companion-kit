@@ -608,9 +608,9 @@ button {
   content: "";
   position: absolute;
   z-index: 1;
-  bottom: -13px;
+  bottom: 4px;
   width: 12px;
-  height: 23px;
+  height: 36px;
   border: 2px solid rgba(115, 93, 156, 0.58);
   border-top: 0;
   border-radius: 0 0 8px 8px;
@@ -680,9 +680,9 @@ button {
 .watchChairBack {
   position: absolute;
   left: 40px;
-  bottom: 25px;
+  bottom: 62px;
   width: 150px;
-  height: 170px;
+  height: 150px;
   border: 2px solid rgba(115, 93, 156, 0.48);
   border-radius: 68px 68px 35px 35px;
   background:
@@ -704,7 +704,7 @@ button {
 .watchSeat {
   position: absolute;
   left: 40px;
-  bottom: 1px;
+  bottom: 40px;
   width: 150px;
   height: 30px;
   border: 2px solid rgba(115, 93, 156, 0.56);

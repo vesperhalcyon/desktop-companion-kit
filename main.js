@@ -260,7 +260,7 @@ function installSmokeCapture() {
         || watchProbe.foregroundVisibility !== 'visible'
         || watchProbe.buttonPressed !== 'true'
         || watchProbe.seatHeight > 36
-        || watchProbe.seatTopRatio < 0.9
+        || watchProbe.seatTopRatio < 0.74
         || watchProbe.armHeight > 34
         || watchProbe.avatarTop < 20
         || watchProbe.avatarTop > 32
