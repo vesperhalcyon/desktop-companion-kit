@@ -351,6 +351,15 @@ function registerIpc() {
     platform: process.platform,
     pageCapability: observer.capability,
     modelEnabled: modelBridge.enabled,
+    runtimeProviders: {
+      text: modelBridge.diagnostics,
+      watchPerception: visionBridge.diagnostics,
+      localSystems: {
+        provider: 'local',
+        model: null,
+        features: ['animation', 'state', 'bedtime', 'scheduling', 'dream-fragments']
+      }
+    },
     watchCapability: {
       supported: watchObserver.supported,
       visionEnabled: visionBridge.enabled,
@@ -722,9 +731,23 @@ async function watchNow() {
       );
       return;
     }
+    if (!modelBridge.enabled) {
+      notifyWatchFailure(
+        'text-disabled',
+        'Movie mode needs its DeepSeek Flash voice before I can react to what M3 sees.'
+      );
+      return;
+    }
     capture = await watchObserver.capture();
     if (!capture.ok) {
       notifyWatchFailure(capture.code, capture.error);
+      return;
+    }
+    if (capture.mediaType !== 'video') {
+      notifyWatchFailure(
+        'native-video-unavailable',
+        'The streaming window did not yield a native video clip, so I left that beat unseen.'
+      );
       return;
     }
     const context = [
@@ -748,7 +771,8 @@ async function watchNow() {
       title: capture.page && capture.page.title
     }, recentWatchLines);
     if (!store.get().watchMode) return;
-    const reaction = line || fallbackWatchReaction(description);
+    if (!line) throw new Error('DeepSeek Flash returned no Watch With Me reaction');
+    const reaction = line;
     recentWatchLines = [...recentWatchLines, reaction].slice(-3);
     watchFailureCode = '';
     sendComment(reaction, 'watch');
@@ -765,13 +789,6 @@ function notifyWatchFailure(code, line) {
   if (!line || watchFailureCode === code || !store.get().watchMode) return;
   watchFailureCode = code;
   sendComment(line, 'watch-status');
-}
-
-function fallbackWatchReaction(description) {
-  if (/\bdoor|entrance|arriv/i.test(description)) return 'That entrance was carrying rather a lot of intent.';
-  if (/\brun|chase|fight|weapon/i.test(description)) return 'Well. Subtlety has left the building.';
-  if (/\blaugh|smile|kiss|embrace/i.test(description)) return 'There it is. That was the honest beat.';
-  return 'That shot knew exactly what it was doing.';
 }
 
 function showContextMenu() {

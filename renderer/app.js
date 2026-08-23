@@ -23,6 +23,9 @@ const watchButton = document.getElementById('watchButton');
 const privacyButton = document.getElementById('privacyButton');
 const screenPrivacyButton = document.getElementById('screenPrivacyButton');
 const quitButton = document.getElementById('quitButton');
+const textProvider = document.getElementById('textProvider');
+const visionProvider = document.getElementById('visionProvider');
+const localProvider = document.getElementById('localProvider');
 
 const settingIds = [
   'observePages',
@@ -61,6 +64,7 @@ async function boot() {
   applyCharacter(state.character);
   applySettings(state.settings);
   applyPlatform(state);
+  applyRuntimeDiagnostics(state.runtimeProviders);
   wireEvents();
   api.onComment((payload) => {
     if (payload.settings) applySettings(payload.settings);
@@ -79,6 +83,20 @@ async function boot() {
   );
   scheduleIdleGesture();
   setTimeout(() => showSpeech(state.character.greeting, 'hello'), 650);
+}
+
+function applyRuntimeDiagnostics(providers = {}) {
+  const text = providers.text || {};
+  const vision = providers.watchPerception || {};
+  const local = providers.localSystems || {};
+  textProvider.textContent = 'Text: ' + (text.enabled
+    ? `${text.provider} / ${text.model}`
+    : `${text.provider || 'none'} / ${text.model || 'disabled'} (disabled)`);
+  visionProvider.textContent = 'Watch perception: ' + (vision.enabled
+    ? `${vision.provider} / ${vision.model} / ${vision.modality}`
+    : `${vision.provider || 'none'} / ${vision.model || 'disabled'} (disabled)`);
+  const features = Array.isArray(local.features) ? local.features.join(', ') : 'local systems';
+  localProvider.textContent = `${features}: ${local.provider || 'local'}, model-free`;
 }
 
 function applyPlatform(state) {

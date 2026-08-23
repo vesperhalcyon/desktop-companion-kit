@@ -41,9 +41,12 @@ test('native M3 client uses the Anthropic-compatible endpoint and extracts text'
   assert.equal(JSON.parse(observed.options.body).messages[0].content[0].type, 'video');
 });
 
-test('keyframe fallback requires an explicit flag', () => {
+test('keyframe fallback is rejected', () => {
   assert.deepEqual(parseArguments(['--context', 'scene', '/tmp/clip.mov']), {
-    context: 'scene', fallback: false, mediaPath: '/tmp/clip.mov'
+    context: 'scene', mediaPath: '/tmp/clip.mov'
   });
-  assert.equal(parseArguments(['--fallback-keyframes', '/tmp/clip.mov']).fallback, true);
+  assert.throws(
+    () => parseArguments(['--fallback-keyframes', '/tmp/clip.mov']),
+    /requires native video perception/
+  );
 });

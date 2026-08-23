@@ -1,5 +1,7 @@
 {
   "enabled": false,
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
   "command": "openclaw",
   "args": [
     "agent",
@@ -8,7 +10,7 @@
     "--session-key",
     "agent:default:desktop-companion",
     "--model",
-    "provider/model",
+    "deepseek/deepseek-v4-flash",
     "--thinking",
     "low",
     "--timeout",

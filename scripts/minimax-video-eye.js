@@ -3,10 +3,6 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
-
-const execFileAsync = promisify(execFile);
 const ENDPOINT = 'https://api.minimax.io/anthropic/v1/messages';
 const MODEL = 'MiniMax-M3';
 const MAX_VIDEO_BYTES = 64 * 1024 * 1024;
@@ -30,11 +26,13 @@ function parseArguments(argv) {
   const args = [...argv];
   const contextIndex = args.indexOf('--context');
   const context = contextIndex >= 0 ? args[contextIndex + 1] : '';
-  const fallback = args.includes('--fallback-keyframes');
+  if (args.includes('--fallback-keyframes')) {
+    throw new Error('Keyframe fallback is disabled; Watch With Me requires native video perception');
+  }
   const mediaPath = args.find((value, index) =>
     !value.startsWith('--') && index !== contextIndex + 1
   );
-  return { context, fallback, mediaPath };
+  return { context, mediaPath };
 }
 
 function buildRequest(video, context = '') {
@@ -89,38 +87,17 @@ async function requestNativeVideo(video, context, options = {}) {
   return description;
 }
 
-async function keyframeFallback(mediaPath, context) {
-  const seeScript = process.env.VESPER_SEE_SCRIPT || '/Users/rachelschroeder/vesper/bin/see.js';
-  const args = [seeScript, '--m3'];
-  if (context) args.push('--context', context);
-  args.push(mediaPath);
-  const { stdout } = await execFileAsync(process.execPath, args, {
-    timeout: 150000,
-    maxBuffer: 4 * 1024 * 1024,
-    encoding: 'utf8',
-    env: process.env
-  });
-  return stdout.trim();
-}
-
 async function main(argv = process.argv.slice(2)) {
-  const { context, fallback, mediaPath } = parseArguments(argv);
-  if (!mediaPath) throw new Error('Usage: minimax-video-eye.js [--context "..."] [--fallback-keyframes] <video.mov>');
+  const { context, mediaPath } = parseArguments(argv);
+  if (!mediaPath) throw new Error('Usage: minimax-video-eye.js [--context "..."] <video.mov>');
   const resolved = path.resolve(mediaPath);
   const stat = fs.statSync(resolved);
   if (!stat.isFile()) throw new Error('Video path is not a file');
   if (path.extname(resolved).toLowerCase() !== '.mov') throw new Error('Native Watch With Me input must be a MOV');
   if (stat.size > MAX_VIDEO_BYTES) throw new Error('Video exceeds the 64 MiB native-input limit');
   const video = fs.readFileSync(resolved);
-  try {
-    const description = await requestNativeVideo(video, context);
-    process.stdout.write(`VIDEO (MiniMax-M3 native video/mov):\n${description}\n`);
-  } catch (error) {
-    if (!fallback) throw error;
-    process.stderr.write(`[minimax-video-eye] native video failed: ${error.message}\n`);
-    const description = await keyframeFallback(resolved, context);
-    process.stdout.write(`VIDEO FALLBACK (MiniMax-M3, six extracted keyframes; not native video):\n${description}\n`);
-  }
+  const description = await requestNativeVideo(video, context);
+  process.stdout.write(`VIDEO (MiniMax-M3 native video/mov):\n${description}\n`);
 }
 
 if (require.main === module) {

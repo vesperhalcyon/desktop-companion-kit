@@ -14,7 +14,7 @@ test('model bridge appends a bounded user message and extracts gateway JSON', as
   const bridge = new ModelBridge({
     enabled: true,
     command: '/usr/bin/example',
-    args: ['agent', '--json'],
+    args: ['agent', '--model', 'deepseek/deepseek-v4-flash', '--json'],
     timeoutMs: 9000,
     maxReplyChars: 120
   }, {
@@ -49,7 +49,7 @@ test('vision reactions treat the scene as bounded data and avoid recent repeats'
   const bridge = new ModelBridge({
     enabled: true,
     command: '/usr/bin/example',
-    args: ['agent', '--json'],
+    args: ['agent', '--model', 'deepseek/deepseek-v4-flash', '--json'],
     maxReplyChars: 600
   }, {
     runner: async (_command, args) => {
@@ -74,4 +74,30 @@ test('config bounds timeouts and malformed gateway output fails visibly', () => 
   assert.equal(config.timeoutMs, 5000);
   assert.equal(config.maxReplyChars, 1200);
   assert.throws(() => extractReply('{}'), /no text payload/);
+});
+
+test('runtime text is pinned to DeepSeek Flash and exposes provider diagnostics', () => {
+  const bridge = new ModelBridge({ enabled: false });
+  assert.deepEqual(bridge.diagnostics, {
+    enabled: false,
+    provider: 'deepseek',
+    model: 'deepseek-v4-flash',
+    purpose: 'runtime-text'
+  });
+  assert.throws(
+    () => sanitizeConfig({ enabled: true, provider: 'openai', model: 'codex', args: ['agent', '--model', 'openai/codex'] }),
+    /DeepSeek Flash/
+  );
+  assert.throws(
+    () => sanitizeConfig({ enabled: true, args: ['agent', '--model', 'codex'] }),
+    /Codex\/OpenAI/
+  );
+  assert.throws(
+    () => sanitizeConfig({ enabled: true, args: ['agent', '--json'] }),
+    /explicitly select deepseek/
+  );
+  assert.throws(
+    () => sanitizeConfig({ enabled: true, args: ['agent', '--model', 'anthropic/claude'] }),
+    /explicitly select deepseek/
+  );
 });

@@ -1,5 +1,8 @@
 {
   "enabled": false,
+  "provider": "minimax",
+  "model": "MiniMax-M3",
+  "modality": "native-video",
   "command": "node",
   "args": [],
   "timeoutMs": 120000,

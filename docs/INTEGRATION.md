@@ -20,15 +20,17 @@ Put a transparent PNG or SVG under `assets/` and reference its basename from the
 {"text":"A short line.","createdAt":"2026-01-01T12:00:00.000Z","source":"scheduled"}
 ```
 
-### Optional model voice
+### Runtime text provider
 
-`config/model-bridge.json` is disabled by default. The bridge invokes a configured executable directly and expects JSON containing:
+`config/model-bridge.json` is disabled by default. When enabled, the bridge requires DeepSeek Flash (`deepseek/deepseek-v4-flash`), invokes the configured executable directly, and expects JSON containing:
 
 ```json
 {"result":{"payloads":[{"text":"The reply."}]}}
 ```
 
-Only text deliberately entered into the companion's chat box is passed to this adapter. Page sight context is never included.
+Text deliberately entered into the companion's chat box and factual MiniMax Watch With Me observations are passed to this adapter. Page sight context is never included. Codex/OpenAI routes are rejected by configuration validation.
+
+Animation, state, bedtime, scheduling, and bundled dream fragments remain entirely local and model-free. The control-panel diagnostics expose the active text provider, Watch perception provider, and these local systems.
 
 ### Page sight
 
