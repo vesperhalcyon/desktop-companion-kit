@@ -258,13 +258,12 @@ function installSmokeCapture() {
     if (!watchProbe.watching || watchProbe.sleeping
         || watchProbe.sceneVisibility !== 'visible'
         || watchProbe.foregroundVisibility !== 'visible'
-        || watchProbe.avatarClipPath === 'none'
         || watchProbe.buttonPressed !== 'true'
-        || watchProbe.seatHeight > 44
-        || watchProbe.seatTopRatio < 0.84
-        || watchProbe.armHeight > 40
-        || watchProbe.avatarTop < 4
-        || watchProbe.avatarTop > 16) {
+        || watchProbe.seatHeight > 36
+        || watchProbe.seatTopRatio < 0.9
+        || watchProbe.armHeight > 34
+        || watchProbe.avatarTop < 20
+        || watchProbe.avatarTop > 32) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
     }
     const watchImage = await petWindow.capturePage();
