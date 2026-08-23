@@ -81,6 +81,17 @@ button {
   filter: drop-shadow(0 11px 10px rgba(0, 0, 0, 0.42));
 }
 
+#watchAvatar {
+  position: relative;
+  display: none;
+  width: auto;
+  height: 318px;
+  max-width: 224px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 11px 10px rgba(0, 0, 0, 0.42));
+}
+
 .gestureMarks {
   position: absolute;
   z-index: 3;
@@ -611,9 +622,14 @@ button {
 }
 
 .avatarWrap.watching #avatar {
-  top: 30px;
-  height: 292px;
-  max-width: 208px;
+  display: none;
+}
+
+.avatarWrap.watching #watchAvatar {
+  display: block;
+  top: 10px;
+  height: 306px;
+  max-width: 224px;
   transform-origin: 50% 94%;
   filter:
     saturate(0.88)
@@ -623,7 +639,7 @@ button {
 }
 
 .avatarWrap.watching .avatarStage {
-  clip-path: inset(0 0 64px 0);
+  clip-path: inset(0 0 34px 0);
 }
 
 .avatarWrap.watching .groundGlow {
@@ -644,9 +660,9 @@ button {
 
 .watchChairBack {
   position: absolute;
-  left: 44px;
+  left: 23px;
   bottom: 24px;
-  width: 154px;
+  width: 184px;
   height: 218px;
   border: 2px solid rgba(115, 93, 156, 0.48);
   border-radius: 68px 68px 35px 35px;
@@ -668,10 +684,10 @@ button {
 
 .watchSeat {
   position: absolute;
-  left: 39px;
+  left: 18px;
   bottom: 12px;
-  width: 164px;
-  height: 52px;
+  width: 194px;
+  height: 58px;
   border: 2px solid rgba(115, 93, 156, 0.56);
   border-radius: 48% 48% 30px 30px;
   background:
@@ -1116,6 +1132,7 @@ body.bedtime .speech {
   .avatarWrap,
   .avatarWrap.moving,
   .avatarWrap #avatar,
+  .avatarWrap #watchAvatar,
   .avatarWrap .groundGlow,
   .avatarWrap .gestureMarks,
   .avatarWrap .sleepScene,

@@ -4,6 +4,7 @@ const api = window.desktopCompanion;
 const characterEyebrow = document.getElementById('characterEyebrow');
 const characterTitle = document.getElementById('characterTitle');
 const avatar = document.getElementById('avatar');
+const watchAvatar = document.getElementById('watchAvatar');
 const avatarWrap = document.getElementById('avatarWrap');
 const gestureMarks = document.getElementById('gestureMarks');
 const sword = document.getElementById('sword');
@@ -130,6 +131,12 @@ function applyCharacter(character) {
   characterTitle.textContent = character.title;
   avatar.src = '../assets/' + character.avatar;
   avatar.alt = 'A tiny illustrated ' + character.name;
+  if (character.watchAvatar) {
+    watchAvatar.src = '../assets/' + character.watchAvatar;
+    watchAvatar.alt = 'A tiny seated ' + character.name;
+  } else {
+    watchAvatar.removeAttribute('src');
+  }
   document.documentElement.style.setProperty('--violet', character.accent);
   document.documentElement.style.setProperty('--violet-deep', character.accentDeep);
 }

@@ -26,6 +26,7 @@ test('profile sanitizer bounds text, colors, arrays, and avatar paths', () => {
 
   assert.equal(profile.name, 'My Companion');
   assert.equal(profile.avatar, 'outside.png');
+  assert.equal(profile.watchAvatar, '');
   assert.equal(profile.accent, DEFAULT_PROFILE.accent);
   assert.equal(profile.accentDeep, '#123abc');
   assert.deepEqual(profile.idleLines, ['One', 'Two']);

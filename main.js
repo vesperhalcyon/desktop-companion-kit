@@ -233,7 +233,7 @@ function installSmokeCapture() {
         const scene = document.querySelector('.watchScene');
         const foreground = document.querySelector('.watchForeground');
         const seat = document.querySelector('.watchSeat');
-        const avatar = document.getElementById('avatar');
+        const avatar = document.getElementById('watchAvatar');
         const wrapRect = wrap.getBoundingClientRect();
         const seatRect = seat.getBoundingClientRect();
         return ({
@@ -242,12 +242,16 @@ function installSmokeCapture() {
           sceneVisibility: getComputedStyle(scene).visibility,
           foregroundVisibility: getComputedStyle(foreground).visibility,
           avatarClipPath: getComputedStyle(document.querySelector('.avatarStage')).clipPath,
-          avatarAnimation: getComputedStyle(document.getElementById('avatar')).animationName,
+          avatarAnimation: getComputedStyle(document.getElementById('watchAvatar')).animationName,
           buttonPressed: document.getElementById('watchButton').getAttribute('aria-pressed'),
           seatHeight: seatRect.height,
           seatTopRatio: (seatRect.top - wrapRect.top) / wrapRect.height,
           armHeight: Number.parseFloat(getComputedStyle(seat, '::before').height),
-          avatarTop: Number.parseFloat(getComputedStyle(avatar).top)
+          avatarTop: Number.parseFloat(getComputedStyle(avatar).top),
+          watchSrc: avatar.currentSrc || avatar.src,
+          watchDisplay: getComputedStyle(avatar).display,
+          standingDisplay: getComputedStyle(document.getElementById('avatar')).display,
+          watchRect: (() => { const rect = avatar.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }; })()
         });
       })()
     `);
@@ -256,11 +260,11 @@ function installSmokeCapture() {
         || watchProbe.foregroundVisibility !== 'visible'
         || watchProbe.avatarClipPath === 'none'
         || watchProbe.buttonPressed !== 'true'
-        || watchProbe.seatHeight > 56
+        || watchProbe.seatHeight > 64
         || watchProbe.seatTopRatio < 0.78
         || watchProbe.armHeight > 50
-        || watchProbe.avatarTop < 24
-        || watchProbe.avatarTop > 36) {
+        || watchProbe.avatarTop < 4
+        || watchProbe.avatarTop > 16) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
     }
     const watchImage = await petWindow.capturePage();
