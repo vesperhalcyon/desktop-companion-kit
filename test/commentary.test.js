@@ -45,6 +45,8 @@ test('replyToUser understands core desktop-pet intents', () => {
   assert.match(replyToUser('Hello'), /There you are/);
   assert.match(replyToUser('What can you do?'), /Drag me/);
   assert.match(replyToUser('Please move'), /relocate/);
+  assert.match(replyToUser('Time for bed'), /turning in|Sword away/);
+  assert.match(replyToUser('Wake up'), /Up again/);
 });
 
 test('page intent stays on the local observation path', () => {

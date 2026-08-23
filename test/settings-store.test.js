@@ -25,6 +25,7 @@ test('sanitize rejects malformed positions and unknown keys', () => {
     observePages: true,
     alwaysOnTop: false,
     launchAtLogin: true,
+    bedtimeMode: false,
     windowPosition: null
   });
 });
@@ -34,9 +35,10 @@ test('settings persist atomically and reload', () => {
   const file = path.join(dir, 'settings.json');
   const store = new SettingsStore(file);
   store.load();
-  store.update({ wander: false, windowPosition: { x: 12.4, y: 20.6 } });
+  store.update({ wander: false, bedtimeMode: true, windowPosition: { x: 12.4, y: 20.6 } });
 
   const reloaded = new SettingsStore(file);
   assert.deepEqual(reloaded.load().windowPosition, { x: 12, y: 21 });
   assert.equal(reloaded.get().wander, false);
+  assert.equal(reloaded.get().bedtimeMode, true);
 });

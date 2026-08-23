@@ -30,6 +30,9 @@ const WINDOW_HEIGHT = 430;
 const WANDER_MIN_MS = 18000;
 const WANDER_MAX_MS = 42000;
 const IDLE_COMMENT_MS = 36000;
+const DREAM_COMMENT_MS = process.env.DESKTOP_COMPANION_SMOKE === '1'
+  ? 700
+  : 2 * 60 * 60 * 1000;
 
 let petWindow = null;
 let store = null;
@@ -44,6 +47,7 @@ let isMoving = false;
 let wanderTimer = null;
 let idleTimer = null;
 let inboxTimer = null;
+let dreamTimer = null;
 let persistTimer = null;
 
 app.setName(character.name);
@@ -71,6 +75,7 @@ app.whenReady().then(() => {
   scheduleWander();
   scheduleIdleComments();
   scheduleInbox();
+  scheduleDreams();
 });
 
 app.on('window-all-closed', () => app.quit());
@@ -113,6 +118,7 @@ function createWindow() {
     clearTimeout(wanderTimer);
     clearInterval(idleTimer);
     clearInterval(inboxTimer);
+    clearTimeout(dreamTimer);
   });
 }
 
@@ -186,6 +192,30 @@ function installSmokeCapture() {
         throw new Error('Page sight did not read visible browser content');
       }
     }
+    await petWindow.webContents.executeJavaScript(`
+      document.getElementById('settingsButton').click();
+      document.getElementById('bedtimeButton').click();
+    `);
+    await new Promise((resolve) => setTimeout(resolve, 1450));
+    const sleepProbe = await petWindow.webContents.executeJavaScript(`
+      ({
+        sleeping: document.getElementById('avatarWrap').classList.contains('sleeping'),
+        bedVisibility: getComputedStyle(document.querySelector('.sleepScene')).visibility,
+        avatarAnimation: getComputedStyle(document.getElementById('avatar')).animationName,
+        speechKind: document.getElementById('speech').dataset.kind || '',
+        dreamText: document.getElementById('speechText').textContent,
+        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
+      })
+    `);
+    if (!sleepProbe.sleeping || sleepProbe.bedVisibility !== 'visible') {
+      throw new Error('Bedtime mode did not reveal the sleeping scene');
+    }
+    if (sleepProbe.speechKind !== 'dream' || !character.dreamLines.includes(sleepProbe.dreamText)) {
+      throw new Error('Bedtime mode did not narrate a local dream');
+    }
+    if (!sleepProbe.reducedMotion && !sleepProbe.avatarAnimation.includes('settleIntoBed')) {
+      throw new Error('Bedtime mode did not start the tuck-in animation');
+    }
     const image = await petWindow.capturePage();
     if (!ui.panelHidden || ui.speechHidden || !ui.speech.trim()) {
       throw new Error('Typed interaction did not produce a visible reply');
@@ -208,6 +238,7 @@ function installSmokeCapture() {
     process.stdout.write('[smoke] ' + JSON.stringify({
       ...ui,
       gestureProbe,
+      sleepProbe,
       imagePath,
       pageProbe
     }) + '\n');
@@ -238,6 +269,12 @@ function registerIpc() {
   }));
 
   ipcMain.handle('pet:react', () => {
+    if (store.get().bedtimeMode) {
+      const line = 'Mm. Still here, little Keeper. Just dreaming.';
+      sendComment(line, 'dream');
+      return line;
+    }
+
     const line = pageContext && store.get().observePages && Math.random() > 0.55
       ? pageComment(pageContext)
       : pick(character.clickLines || clickLines);
@@ -248,6 +285,8 @@ function registerIpc() {
   ipcMain.handle('pet:ask', async (_event, message) => {
     const text = String(message || '');
     const pageIntent = isPageIntent(text);
+    const bedtimeCommand = /\b(bedtime|go to bed|sleep now|time for bed|good ?night)\b/i.test(text);
+    const wakeCommand = /\b(wake up|awake|good morning|rise and shine)\b/i.test(text);
     const localCommand = /move|wander|walk|other side|quiet|hush|shh|stop talking/i
       .test(text);
     let context = pageContext;
@@ -256,7 +295,7 @@ function registerIpc() {
     }
 
     let line = '';
-    if (pageIntent || localCommand || !modelBridge.enabled) {
+    if (pageIntent || localCommand || bedtimeCommand || wakeCommand || !modelBridge.enabled) {
       line = replyToUser(text, context, character);
     } else {
       try {
@@ -273,6 +312,12 @@ function registerIpc() {
 
     if (/quiet|hush|shh|stop talking/i.test(text)) {
       store.update({ idleComments: false });
+    }
+
+    if (bedtimeCommand || wakeCommand) {
+      const before = store.get();
+      const next = store.update({ bedtimeMode: bedtimeCommand });
+      syncBedtimeState(before, next);
     }
 
     return { line, settings: store.get(), pageContext: context };
@@ -307,6 +352,9 @@ function registerIpc() {
       observePage().then((context) => sendComment(pageComment(context), 'page'));
     }
     if (before.observePages && !settings.observePages) pageContext = null;
+    if (before.bedtimeMode !== settings.bedtimeMode) {
+      syncBedtimeState(before, settings);
+    }
 
     return settings;
   });
@@ -368,7 +416,7 @@ function scheduleIdleComments() {
   clearInterval(idleTimer);
   idleTimer = setInterval(async () => {
     const settings = store.get();
-    if (!settings.idleComments || panelOpen || isDragging || isMoving) return;
+    if (settings.bedtimeMode || !settings.idleComments || panelOpen || isDragging || isMoving) return;
 
     if (settings.observePages && (!pageContext || Math.random() > 0.55)) {
       await observePage();
@@ -385,17 +433,34 @@ function scheduleInbox() {
   clearInterval(inboxTimer);
   inboxTimer = setInterval(() => {
     try {
-      const messages = inboxReader.poll();
-      for (const text of messages) sendComment(text, 'scheduled');
+      const settings = store.get();
+      const entries = inboxReader.pollEntries();
+      for (const entry of entries) {
+        const isDream = entry.source === 'dream';
+        if (isDream !== settings.bedtimeMode) continue;
+        sendComment(entry.text, isDream ? 'dream' : 'scheduled');
+      }
     } catch (error) {
       console.warn('[inbox] read failed:', error.message);
     }
   }, 1500);
 }
 
+function scheduleDreams() {
+  clearTimeout(dreamTimer);
+  if (!store || !store.get().bedtimeMode) return;
+
+  dreamTimer = setTimeout(() => {
+    if (store.get().bedtimeMode) {
+      sendComment(pick(character.dreamLines), 'dream');
+      scheduleDreams();
+    }
+  }, DREAM_COMMENT_MS);
+}
+
 function scheduleWander() {
   clearTimeout(wanderTimer);
-  if (!store || !store.get().wander) return;
+  if (!store || !store.get().wander || store.get().bedtimeMode) return;
 
   const delay = WANDER_MIN_MS + Math.round(Math.random() * (WANDER_MAX_MS - WANDER_MIN_MS));
   wanderTimer = setTimeout(async () => {
@@ -405,7 +470,8 @@ function scheduleWander() {
 }
 
 async function wanderNow(userRequested) {
-  if (!petWindow || isMoving || isDragging || panelOpen || !store.get().wander && !userRequested) {
+  if (!petWindow || isMoving || isDragging || panelOpen || store.get().bedtimeMode
+      || !store.get().wander && !userRequested) {
     return;
   }
 
@@ -498,10 +564,28 @@ function openPrivacySettings() {
   return Promise.resolve(false);
 }
 
+function syncBedtimeState(_before, settings) {
+  if (settings.bedtimeMode) clearTimeout(wanderTimer);
+  else if (settings.wander) scheduleWander();
+  scheduleDreams();
+  if (petWindow && !petWindow.isDestroyed()) {
+    petWindow.webContents.send('pet:settings', settings);
+  }
+}
+
 function showContextMenu() {
   if (!petWindow) return;
   const settings = store.get();
   const menu = Menu.buildFromTemplate([
+    {
+      label: settings.bedtimeMode ? 'Wake up' : 'Bedtime',
+      click: () => {
+        const before = store.get();
+        const next = store.update({ bedtimeMode: !before.bedtimeMode });
+        syncBedtimeState(before, next);
+      }
+    },
+    { type: 'separator' },
     {
       label: settings.wander ? 'Pause wandering' : 'Resume wandering',
       click: () => {

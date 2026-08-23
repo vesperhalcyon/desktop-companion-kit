@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('desktopCompanion', {
     ipcRenderer.on('pet:comment', listener);
     return () => ipcRenderer.removeListener('pet:comment', listener);
   },
+  onSettings: (handler) => {
+    const listener = (_event, settings) => handler(settings);
+    ipcRenderer.on('pet:settings', listener);
+    return () => ipcRenderer.removeListener('pet:settings', listener);
+  },
   onMoveState: (handler) => {
     const listener = (_event, moving) => handler(moving);
     ipcRenderer.on('pet:moving', listener);

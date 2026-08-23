@@ -33,6 +33,7 @@
       <div class="actions">
         <button id="pageButton" type="button">Comment on this page</button>
         <button id="moveButton" type="button">Relocate</button>
+        <button id="bedtimeButton" type="button">Bedtime</button>
       </div>
 
       <div class="toggles">
@@ -80,6 +81,16 @@
     </section>
 
     <div id="avatarWrap" class="avatarWrap interactive" title="Click, drag, or right-click">
+      <div class="sleepScene" aria-hidden="true">
+        <div class="moonGlow"></div>
+        <div class="bedFrame">
+          <div class="pillow"></div>
+          <div class="mattress"></div>
+          <div class="blanket"></div>
+          <div class="bedRail"></div>
+        </div>
+        <div class="dreamMarks"><span>z</span><span>z</span><span>z</span></div>
+      </div>
       <div class="groundGlow"></div>
       <img id="avatar" src="../assets/mascot.svg" alt="A tiny illustrated desktop companion">
       <div id="gestureMarks" class="gestureMarks" aria-hidden="true">

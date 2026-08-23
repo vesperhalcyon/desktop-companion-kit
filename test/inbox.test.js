@@ -19,9 +19,24 @@ test('writer and reader deliver new recent messages exactly once', () => {
   const now = Date.now();
   const reader = new InboxReader(inboxPath);
 
-  writeInboxMessage(inboxPath, '  There   you are.  ', { createdAt: now });
+  writeInboxMessage(inboxPath, '  There   you are.  ', { createdAt: now, source: 'dream' });
   assert.deepEqual(reader.poll(now), ['There you are.']);
   assert.deepEqual(reader.poll(now), []);
+});
+
+test('entry polling preserves a bounded source for dream routing', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-inbox-'));
+  const inboxPath = path.join(directory, 'inbox.jsonl');
+  const now = Date.now();
+  const reader = new InboxReader(inboxPath);
+
+  writeInboxMessage(inboxPath, 'The violet road turned toward home.', {
+    createdAt: now,
+    source: 'dream'
+  });
+  assert.deepEqual(reader.pollEntries(now).map(({ text, source }) => ({ text, source })), [
+    { text: 'The violet road turned toward home.', source: 'dream' }
+  ]);
 });
 
 test('reader ignores stale and malformed entries', () => {

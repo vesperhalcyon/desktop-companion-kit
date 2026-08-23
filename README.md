@@ -8,6 +8,7 @@ A configurable transparent macOS and Windows desktop companion: draggable, indep
 - Loads name, colors, lines, responses, and artwork from a character profile.
 - Can be dragged and occasionally wanders around the current display.
 - Has a small motion vocabulary: click-triggered sword swings, waves, hops, bows, glances, flourishes, and sparse idle gestures.
+- Has a persistent bedtime mode that puts the companion into a moonlit bed, pauses patrols and idle chatter, narrates a local dream every two hours, and accepts fresh dream-source lines while sleeping.
 - Reacts to clicks and accepts short typed prompts.
 - Can optionally route ordinary typed conversation to a configured model bridge. The bridge is off by default.
 - Makes optional idle comments.
@@ -33,7 +34,7 @@ npm install
 npm start
 ```
 
-Right-click the mascot, or click the three-dot control near it, to open controls. Drag the figure itself to move it.
+Right-click the mascot, or click the three-dot control near it, to open controls. Drag the figure itself to move it. Choose **Bedtime** to tuck the companion in; choose **Wake up** to resume the watch.
 
 ## Verify
 

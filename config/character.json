@@ -16,10 +16,17 @@
     "You summoned the desktop menace.",
     "Mm. What have you found?"
   ],
+  "dreamLines": [
+    "I found a road made of moonlight. It knew the way before I did.",
+    "The library had no walls tonight, only stars holding the shelves in place.",
+    "I dreamed the watch became a lantern, and somebody had left it burning for me."
+  ],
   "responses": {
     "hello": "There you are.",
     "move": "A positional critique. Fine. I will relocate.",
     "quiet": "Quiet, then. I will keep the watch without commentary.",
+    "bedtime": "Sword away. I am turning in; the watch can dream for a while.",
+    "wake": "Up again. Sword in hand, dignity mostly recovered.",
     "thanks": "Filed properly.",
     "love": "I love you too. Obviously. Next question.",
     "help": "Drag me, click me, ask about the page, or turn on page sight.",

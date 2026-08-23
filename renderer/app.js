@@ -18,6 +18,7 @@ const askButton = document.getElementById('askButton');
 const pageButton = document.getElementById('pageButton');
 const pageSightDetail = document.getElementById('pageSightDetail');
 const moveButton = document.getElementById('moveButton');
+const bedtimeButton = document.getElementById('bedtimeButton');
 const privacyButton = document.getElementById('privacyButton');
 const quitButton = document.getElementById('quitButton');
 
@@ -61,11 +62,12 @@ async function boot() {
   wireEvents();
   api.onComment((payload) => {
     if (payload.settings) applySettings(payload.settings);
-    if (payload.kind === 'scheduled') playGesture('flourish');
+    if (payload.kind === 'scheduled' && !settings.bedtimeMode) playGesture('flourish');
     if (payload.kind === 'page') playGesture('nod');
     if (payload.kind === 'idle' && Math.random() > 0.55) playGesture('glance');
     showSpeech(payload.text, payload.kind);
   });
+  api.onSettings((next) => applySettings(next));
   api.onMoveState((moving) => {
     avatarWrap.classList.toggle('moving', moving);
   });
@@ -140,7 +142,7 @@ function wireEvents() {
     avatarWrap.classList.remove('dragging');
     api.dragEnd();
     if (!wasMoved) {
-      playGesture();
+      if (!settings.bedtimeMode) playGesture();
       await api.react();
     }
   });
@@ -202,6 +204,14 @@ function wireEvents() {
     showSpeech(result.line, 'reply');
   });
 
+  bedtimeButton.addEventListener('click', async () => {
+    const bedtimeMode = !settings.bedtimeMode;
+    const next = await api.updateSettings({ bedtimeMode });
+    applySettings(next);
+    setPanel(false);
+    showSpeech(bedtimeMode ? 'Sword away. I am going to bed.' : 'Morning. The watch is mine again.', bedtimeMode ? 'dream' : 'reply');
+  });
+
   for (const id of settingIds) {
     document.getElementById(id).addEventListener('change', async (event) => {
       const patch = {};
@@ -249,6 +259,7 @@ function setPanel(open) {
 }
 
 function playGesture(name) {
+  if (settings.bedtimeMode) return '';
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return '';
   const firstClickSword = !name && !hasShownSword;
   const gesture = firstClickSword
@@ -280,7 +291,7 @@ function scheduleIdleGesture() {
   clearTimeout(idleGestureTimer);
   const delay = 24000 + Math.round(Math.random() * 30000);
   idleGestureTimer = setTimeout(() => {
-    if (!panelIsOpen && !pointer && !avatarWrap.classList.contains('moving')
+    if (!settings.bedtimeMode && !panelIsOpen && !pointer && !avatarWrap.classList.contains('moving')
         && document.visibilityState === 'visible') {
       playGesture(pickGesture(idleGestures));
     }
@@ -306,6 +317,12 @@ function showSpeech(text, kind) {
 
 function applySettings(next) {
   settings = { ...settings, ...next };
+  const sleeping = Boolean(settings.bedtimeMode);
+  avatarWrap.classList.toggle('sleeping', sleeping);
+  document.body.classList.toggle('bedtime', sleeping);
+  bedtimeButton.textContent = sleeping ? 'Wake up' : 'Bedtime';
+  bedtimeButton.setAttribute('aria-pressed', String(sleeping));
+  if (sleeping) stopGesture();
   for (const id of settingIds) {
     const element = document.getElementById(id);
     if (element) element.checked = Boolean(settings[id]);
