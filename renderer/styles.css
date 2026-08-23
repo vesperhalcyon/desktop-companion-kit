@@ -61,9 +61,17 @@ button {
   animation: walkBob 0.36s ease-in-out infinite alternate;
 }
 
+.avatarStage {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  pointer-events: none;
+}
+
 #avatar {
   position: relative;
-  z-index: 2;
   display: block;
   width: auto;
   height: 318px;
@@ -577,10 +585,8 @@ button {
 }
 
 .avatarWrap.sleeping #avatar {
-  z-index: 2;
   height: 210px;
   max-width: 210px;
-  clip-path: inset(0 0 48% 0);
   transform-origin: 50% 54%;
   filter:
     saturate(0.78)
@@ -589,6 +595,10 @@ button {
   animation:
     settleIntoBed 1.25s cubic-bezier(0.24, 0.74, 0.22, 1) both,
     sleepBreath 5.4s ease-in-out 1.25s infinite;
+}
+
+.avatarWrap.sleeping .avatarStage {
+  clip-path: inset(150px 0 54px 0);
 }
 
 .moonGlow {

@@ -200,6 +200,7 @@ function installSmokeCapture() {
     const sleepProbe = await petWindow.webContents.executeJavaScript(`
       (() => {
         const avatarStyle = getComputedStyle(document.getElementById('avatar'));
+        const avatarStageStyle = getComputedStyle(document.querySelector('.avatarStage'));
         const backdropStyle = getComputedStyle(document.querySelector('.sleepScene'));
         const foregroundStyle = getComputedStyle(document.querySelector('.sleepForeground'));
         return ({
@@ -207,9 +208,9 @@ function installSmokeCapture() {
         bedVisibility: backdropStyle.visibility,
         foregroundVisibility: foregroundStyle.visibility,
         backdropZ: Number(backdropStyle.zIndex),
-        avatarZ: Number(avatarStyle.zIndex),
+        avatarZ: Number(avatarStageStyle.zIndex),
         foregroundZ: Number(foregroundStyle.zIndex),
-        avatarClipPath: avatarStyle.clipPath,
+        avatarClipPath: avatarStageStyle.clipPath,
         avatarAnimation: avatarStyle.animationName,
         speechKind: document.getElementById('speech').dataset.kind || '',
         dreamText: document.getElementById('speechText').textContent,
