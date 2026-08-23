@@ -611,6 +611,7 @@ button {
 }
 
 .avatarWrap.watching #avatar {
+  top: 30px;
   height: 292px;
   max-width: 208px;
   transform-origin: 50% 94%;

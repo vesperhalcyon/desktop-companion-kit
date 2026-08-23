@@ -233,6 +233,7 @@ function installSmokeCapture() {
         const scene = document.querySelector('.watchScene');
         const foreground = document.querySelector('.watchForeground');
         const seat = document.querySelector('.watchSeat');
+        const avatar = document.getElementById('avatar');
         const wrapRect = wrap.getBoundingClientRect();
         const seatRect = seat.getBoundingClientRect();
         return ({
@@ -245,7 +246,8 @@ function installSmokeCapture() {
           buttonPressed: document.getElementById('watchButton').getAttribute('aria-pressed'),
           seatHeight: seatRect.height,
           seatTopRatio: (seatRect.top - wrapRect.top) / wrapRect.height,
-          armHeight: Number.parseFloat(getComputedStyle(seat, '::before').height)
+          armHeight: Number.parseFloat(getComputedStyle(seat, '::before').height),
+          avatarTop: Number.parseFloat(getComputedStyle(avatar).top)
         });
       })()
     `);
@@ -256,7 +258,9 @@ function installSmokeCapture() {
         || watchProbe.buttonPressed !== 'true'
         || watchProbe.seatHeight > 56
         || watchProbe.seatTopRatio < 0.78
-        || watchProbe.armHeight > 50) {
+        || watchProbe.armHeight > 50
+        || watchProbe.avatarTop < 24
+        || watchProbe.avatarTop > 36) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
     }
     const watchImage = await petWindow.capturePage();
