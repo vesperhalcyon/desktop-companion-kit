@@ -331,7 +331,7 @@ button {
   content: "";
   position: absolute;
   right: 24px;
-  bottom: -10px;
+  bottom: 8px;
   width: 18px;
   height: 18px;
   border-right: 1px solid var(--line);
