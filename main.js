@@ -232,6 +232,9 @@ function installSmokeCapture() {
         const wrap = document.getElementById('avatarWrap');
         const scene = document.querySelector('.watchScene');
         const foreground = document.querySelector('.watchForeground');
+        const seat = document.querySelector('.watchSeat');
+        const wrapRect = wrap.getBoundingClientRect();
+        const seatRect = seat.getBoundingClientRect();
         return ({
           watching: wrap.classList.contains('watching'),
           sleeping: wrap.classList.contains('sleeping'),
@@ -239,7 +242,10 @@ function installSmokeCapture() {
           foregroundVisibility: getComputedStyle(foreground).visibility,
           avatarClipPath: getComputedStyle(document.querySelector('.avatarStage')).clipPath,
           avatarAnimation: getComputedStyle(document.getElementById('avatar')).animationName,
-          buttonPressed: document.getElementById('watchButton').getAttribute('aria-pressed')
+          buttonPressed: document.getElementById('watchButton').getAttribute('aria-pressed'),
+          seatHeight: seatRect.height,
+          seatTopRatio: (seatRect.top - wrapRect.top) / wrapRect.height,
+          armHeight: Number.parseFloat(getComputedStyle(seat, '::before').height)
         });
       })()
     `);
@@ -247,7 +253,10 @@ function installSmokeCapture() {
         || watchProbe.sceneVisibility !== 'visible'
         || watchProbe.foregroundVisibility !== 'visible'
         || watchProbe.avatarClipPath === 'none'
-        || watchProbe.buttonPressed !== 'true') {
+        || watchProbe.buttonPressed !== 'true'
+        || watchProbe.seatHeight > 56
+        || watchProbe.seatTopRatio < 0.78
+        || watchProbe.armHeight > 50) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
     }
     const watchImage = await petWindow.capturePage();
@@ -637,11 +646,25 @@ function animateWindow(fromX, fromY, toX, toY, duration) {
       const eased = progress < 0.5
         ? 2 * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-      petWindow.setPosition(
-        Math.round(fromX + (toX - fromX) * eased),
-        Math.round(fromY + (toY - fromY) * eased),
-        false
-      );
+      const nextX = Math.round(fromX + (toX - fromX) * eased);
+      const nextY = Math.round(fromY + (toY - fromY) * eased);
+      if (!Number.isFinite(nextX) || !Number.isFinite(nextY)) {
+        console.warn('[wander] stopped invalid window coordinates', { nextX, nextY });
+        isMoving = false;
+        petWindow.webContents.send('pet:moving', false);
+        resolve();
+        return;
+      }
+
+      try {
+        petWindow.setPosition(nextX, nextY, false);
+      } catch (error) {
+        console.warn('[wander] window movement stopped:', error.message);
+        isMoving = false;
+        if (!petWindow.isDestroyed()) petWindow.webContents.send('pet:moving', false);
+        resolve();
+        return;
+      }
 
       if (progress < 1) {
         setTimeout(frame, 16);
