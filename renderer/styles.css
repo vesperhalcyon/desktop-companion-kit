@@ -542,20 +542,29 @@ button {
   color: #f1ddab;
 }
 
-.sleepScene {
+.sleepScene,
+.sleepForeground {
   visibility: hidden;
   position: absolute;
-  z-index: 3;
   inset: 0;
   opacity: 0;
   pointer-events: none;
+}
+
+.sleepScene {
+  z-index: 1;
+}
+
+.sleepForeground {
+  z-index: 3;
 }
 
 .avatarWrap.sleeping {
   animation: none;
 }
 
-.avatarWrap.sleeping .sleepScene {
+.avatarWrap.sleeping .sleepScene,
+.avatarWrap.sleeping .sleepForeground {
   visibility: visible;
   opacity: 1;
   animation: sleepSceneIn 900ms ease-out both;
@@ -571,6 +580,7 @@ button {
   z-index: 2;
   height: 210px;
   max-width: 210px;
+  clip-path: inset(0 0 48% 0);
   transform-origin: 50% 54%;
   filter:
     saturate(0.78)
@@ -761,14 +771,14 @@ body.bedtime .speech {
 
 @keyframes settleIntoBed {
   0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-  34% { transform: translate(-27px, 22px) rotate(-14deg) scale(0.88); }
-  72% { transform: translate(-48px, 73px) rotate(-77deg) scale(0.72); }
-  100% { transform: translate(-51px, 77px) rotate(-84deg) scale(0.69); }
+  34% { transform: translate(-27px, 4px) rotate(-14deg) scale(0.88); }
+  72% { transform: translate(-48px, -13px) rotate(-77deg) scale(0.72); }
+  100% { transform: translate(-51px, -18px) rotate(-84deg) scale(0.69); }
 }
 
 @keyframes sleepBreath {
-  0%, 100% { transform: translate(-51px, 77px) rotate(-84deg) scale(0.69); }
-  50% { transform: translate(-49px, 75px) rotate(-83.5deg) scale(0.705); }
+  0%, 100% { transform: translate(-51px, -18px) rotate(-84deg) scale(0.69); }
+  50% { transform: translate(-49px, -20px) rotate(-83.5deg) scale(0.705); }
 }
 
 @keyframes blanketBreath {

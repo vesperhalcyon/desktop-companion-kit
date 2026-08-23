@@ -198,17 +198,33 @@ function installSmokeCapture() {
     `);
     await new Promise((resolve) => setTimeout(resolve, 1450));
     const sleepProbe = await petWindow.webContents.executeJavaScript(`
-      ({
+      (() => {
+        const avatarStyle = getComputedStyle(document.getElementById('avatar'));
+        const backdropStyle = getComputedStyle(document.querySelector('.sleepScene'));
+        const foregroundStyle = getComputedStyle(document.querySelector('.sleepForeground'));
+        return ({
         sleeping: document.getElementById('avatarWrap').classList.contains('sleeping'),
-        bedVisibility: getComputedStyle(document.querySelector('.sleepScene')).visibility,
-        avatarAnimation: getComputedStyle(document.getElementById('avatar')).animationName,
+        bedVisibility: backdropStyle.visibility,
+        foregroundVisibility: foregroundStyle.visibility,
+        backdropZ: Number(backdropStyle.zIndex),
+        avatarZ: Number(avatarStyle.zIndex),
+        foregroundZ: Number(foregroundStyle.zIndex),
+        avatarClipPath: avatarStyle.clipPath,
+        avatarAnimation: avatarStyle.animationName,
         speechKind: document.getElementById('speech').dataset.kind || '',
         dreamText: document.getElementById('speechText').textContent,
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches
-      })
+        });
+      })()
     `);
     if (!sleepProbe.sleeping || sleepProbe.bedVisibility !== 'visible') {
       throw new Error('Bedtime mode did not reveal the sleeping scene');
+    }
+    if (sleepProbe.foregroundVisibility !== 'visible'
+        || !(sleepProbe.backdropZ < sleepProbe.avatarZ
+          && sleepProbe.avatarZ < sleepProbe.foregroundZ)
+        || sleepProbe.avatarClipPath === 'none') {
+      throw new Error('Bedtime mode did not layer and crop the sleeping pose correctly');
     }
     if (sleepProbe.speechKind !== 'dream' || !character.dreamLines.includes(sleepProbe.dreamText)) {
       throw new Error('Bedtime mode did not narrate a local dream');
