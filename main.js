@@ -267,6 +267,7 @@ function installSmokeCapture() {
         || !watchProbe.watchSrc.includes('mascot.seated')) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
     }
+    await new Promise((resolve) => setTimeout(resolve, 700));
     const watchImage = await petWindow.capturePage();
     await petWindow.webContents.executeJavaScript(`
       document.getElementById('settingsButton').click();
