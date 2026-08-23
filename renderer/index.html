@@ -34,7 +34,9 @@
         <button id="pageButton" type="button">Comment on this page</button>
         <button id="moveButton" type="button">Relocate</button>
         <button id="bedtimeButton" type="button">Bedtime</button>
+        <button id="watchButton" type="button" title="Opt-in: sends short clips from the active Hulu or Netflix window to the configured vision bridge">Watch with me</button>
       </div>
+      <p class="watchPrivacy">Watch mode samples only the active Hulu or Netflix window. M3 receives the short clip; the temporary media is deleted immediately.</p>
 
       <div class="toggles">
         <label>
@@ -76,6 +78,7 @@
 
       <footer>
         <button id="privacyButton" class="textButton" type="button">Privacy settings</button>
+        <button id="screenPrivacyButton" class="textButton" type="button">Screen recording</button>
         <button id="quitButton" class="textButton danger" type="button">Quit</button>
       </footer>
     </section>
@@ -88,9 +91,17 @@
           <div class="mattress"></div>
         </div>
       </div>
+      <div class="watchScene" aria-hidden="true">
+        <div class="screenGlow"></div>
+        <div class="watchChairBack"></div>
+        <div class="filmMarks"><span></span><span></span><span></span></div>
+      </div>
       <div class="groundGlow"></div>
       <div class="avatarStage">
         <img id="avatar" src="../assets/mascot.svg" alt="A tiny illustrated desktop companion">
+      </div>
+      <div class="watchForeground" aria-hidden="true">
+        <div class="watchSeat"></div>
       </div>
       <div class="sleepForeground" aria-hidden="true">
         <div class="bedFrame">

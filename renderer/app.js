@@ -19,7 +19,9 @@ const pageButton = document.getElementById('pageButton');
 const pageSightDetail = document.getElementById('pageSightDetail');
 const moveButton = document.getElementById('moveButton');
 const bedtimeButton = document.getElementById('bedtimeButton');
+const watchButton = document.getElementById('watchButton');
 const privacyButton = document.getElementById('privacyButton');
+const screenPrivacyButton = document.getElementById('screenPrivacyButton');
 const quitButton = document.getElementById('quitButton');
 
 const settingIds = [
@@ -64,6 +66,7 @@ async function boot() {
     if (payload.settings) applySettings(payload.settings);
     if (payload.kind === 'scheduled' && !settings.bedtimeMode) playGesture('flourish');
     if (payload.kind === 'page') playGesture('nod');
+    if (payload.kind === 'watch' && Math.random() > 0.45) playGesture('nod', true);
     if (payload.kind === 'idle' && Math.random() > 0.55) playGesture('glance');
     showSpeech(payload.text, payload.kind);
   });
@@ -82,15 +85,25 @@ function applyPlatform(state) {
   if (state.platform === 'darwin') {
     pageSightDetail.textContent = 'Reads the active tab locally';
     privacyButton.textContent = 'macOS privacy settings';
+    screenPrivacyButton.hidden = false;
+    screenPrivacyButton.textContent = state.watchCapability
+      && state.watchCapability.screenPermission === 'granted'
+      ? 'Screen access granted'
+      : 'Allow screen recording';
+    watchButton.title = state.watchCapability && state.watchCapability.visionEnabled
+      ? 'Sends short clips from the active Hulu or Netflix window to M3 only while enabled'
+      : 'The private vision bridge is not configured on this installation';
     return;
   }
   if (state.platform === 'win32') {
     pageSightDetail.textContent = 'Reads the browser window title locally';
     privacyButton.textContent = 'Windows privacy settings';
+    screenPrivacyButton.hidden = true;
     return;
   }
   pageSightDetail.textContent = 'Unavailable on this operating system';
   privacyButton.textContent = 'Privacy settings';
+  screenPrivacyButton.hidden = true;
 }
 
 function applyCharacter(character) {
@@ -142,7 +155,7 @@ function wireEvents() {
     avatarWrap.classList.remove('dragging');
     api.dragEnd();
     if (!wasMoved) {
-      if (!settings.bedtimeMode) playGesture();
+      if (!settings.bedtimeMode && !settings.watchMode) playGesture();
       await api.react();
     }
   });
@@ -212,6 +225,19 @@ function wireEvents() {
     showSpeech(bedtimeMode ? 'Sword away. I am going to bed.' : 'Morning. The watch is mine again.', bedtimeMode ? 'dream' : 'reply');
   });
 
+  watchButton.addEventListener('click', async () => {
+    const watchMode = !settings.watchMode;
+    const next = await api.updateSettings({ watchMode });
+    applySettings(next);
+    setPanel(false);
+    showSpeech(
+      watchMode
+        ? 'All right. Put Hulu or Netflix in front and let me see what we are watching.'
+        : 'Movie eye closed. Nothing else will be captured.',
+      watchMode ? 'watch-status' : 'reply'
+    );
+  });
+
   for (const id of settingIds) {
     document.getElementById(id).addEventListener('change', async (event) => {
       const patch = {};
@@ -222,6 +248,7 @@ function wireEvents() {
   }
 
   privacyButton.addEventListener('click', () => api.openPrivacySettings());
+  screenPrivacyButton.addEventListener('click', () => api.openScreenSettings());
   quitButton.addEventListener('click', () => api.quit());
 
   document.addEventListener('mousemove', (event) => {
@@ -258,8 +285,8 @@ function setPanel(open) {
   }
 }
 
-function playGesture(name) {
-  if (settings.bedtimeMode) return '';
+function playGesture(name, allowWhileWatching = false) {
+  if (settings.bedtimeMode || settings.watchMode && !allowWhileWatching) return '';
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return '';
   const firstClickSword = !name && !hasShownSword;
   const gesture = firstClickSword
@@ -291,7 +318,8 @@ function scheduleIdleGesture() {
   clearTimeout(idleGestureTimer);
   const delay = 24000 + Math.round(Math.random() * 30000);
   idleGestureTimer = setTimeout(() => {
-    if (!settings.bedtimeMode && !panelIsOpen && !pointer && !avatarWrap.classList.contains('moving')
+    if (!settings.bedtimeMode && !settings.watchMode && !panelIsOpen && !pointer
+        && !avatarWrap.classList.contains('moving')
         && document.visibilityState === 'visible') {
       playGesture(pickGesture(idleGestures));
     }
@@ -318,11 +346,16 @@ function showSpeech(text, kind) {
 function applySettings(next) {
   settings = { ...settings, ...next };
   const sleeping = Boolean(settings.bedtimeMode);
+  const watching = Boolean(settings.watchMode);
   avatarWrap.classList.toggle('sleeping', sleeping);
+  avatarWrap.classList.toggle('watching', watching);
   document.body.classList.toggle('bedtime', sleeping);
+  document.body.classList.toggle('watching', watching);
   bedtimeButton.textContent = sleeping ? 'Wake up' : 'Bedtime';
   bedtimeButton.setAttribute('aria-pressed', String(sleeping));
-  if (sleeping) stopGesture();
+  watchButton.textContent = watching ? 'Stop watching' : 'Watch with me';
+  watchButton.setAttribute('aria-pressed', String(watching));
+  if (sleeping || watching) stopGesture();
   for (const id of settingIds) {
     const element = document.getElementById(id);
     if (element) element.checked = Boolean(settings[id]);

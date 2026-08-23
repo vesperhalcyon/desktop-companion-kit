@@ -432,13 +432,20 @@ button {
   color: white;
 }
 
+.watchPrivacy {
+  margin: -5px 2px 10px;
+  color: #9185a1;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
 .askRow button {
   padding: 0 13px;
 }
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 0.62fr;
+  grid-template-columns: 1.15fr 0.66fr 0.72fr 1.25fr;
   gap: 7px;
   margin: 10px 0 12px;
 }
@@ -540,14 +547,166 @@ button {
   color: #ff9fba;
 }
 
-.actions {
-  grid-template-columns: 1fr 0.58fr 0.68fr;
-}
-
-#bedtimeButton[aria-pressed="true"] {
+#bedtimeButton[aria-pressed="true"],
+#watchButton[aria-pressed="true"] {
   border-color: rgba(212, 181, 111, 0.55);
   background: linear-gradient(145deg, rgba(45, 31, 79, 0.92), rgba(18, 14, 32, 0.96));
   color: #f1ddab;
+}
+
+#watchButton[aria-pressed="true"] {
+  border-color: rgba(126, 190, 255, 0.58);
+  background: linear-gradient(145deg, rgba(28, 66, 102, 0.92), rgba(13, 21, 38, 0.96));
+  color: #d8efff;
+}
+
+.watchScene {
+  visibility: hidden;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.watchForeground {
+  visibility: hidden;
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.avatarWrap.watching {
+  animation: none;
+}
+
+.avatarWrap.watching .watchScene,
+.avatarWrap.watching .watchForeground {
+  visibility: visible;
+  opacity: 1;
+  animation: watchSceneIn 650ms ease-out both;
+}
+
+.avatarWrap.watching .sleepScene,
+.avatarWrap.watching .sleepForeground,
+.avatarWrap.watching .gestureMarks,
+.avatarWrap.watching .sword {
+  display: none;
+}
+
+.avatarWrap.watching #avatar {
+  height: 292px;
+  max-width: 208px;
+  transform-origin: 50% 94%;
+  filter:
+    saturate(0.88)
+    brightness(0.88)
+    drop-shadow(-9px 8px 13px rgba(27, 101, 161, 0.42));
+  animation: watchLean 5.8s ease-in-out infinite;
+}
+
+.avatarWrap.watching .avatarStage {
+  clip-path: inset(0 0 58px 0);
+}
+
+.avatarWrap.watching .groundGlow {
+  width: 152px;
+  background: radial-gradient(ellipse, rgba(58, 143, 210, 0.52), transparent 72%);
+}
+
+.screenGlow {
+  position: absolute;
+  left: -31px;
+  top: 94px;
+  width: 128px;
+  height: 178px;
+  background: radial-gradient(ellipse at 0 48%, rgba(130, 202, 255, 0.26), rgba(53, 91, 155, 0.08) 46%, transparent 72%);
+  filter: blur(7px);
+  animation: screenFlicker 7.4s steps(1, end) infinite;
+}
+
+.watchChairBack {
+  position: absolute;
+  left: 44px;
+  bottom: 24px;
+  width: 154px;
+  height: 218px;
+  border: 2px solid rgba(115, 93, 156, 0.48);
+  border-radius: 68px 68px 35px 35px;
+  background:
+    radial-gradient(circle at 24% 40%, rgba(81, 130, 171, 0.14), transparent 45%),
+    linear-gradient(145deg, rgba(45, 34, 66, 0.92), rgba(18, 14, 29, 0.97));
+  box-shadow:
+    inset 9px 0 18px rgba(116, 174, 218, 0.08),
+    0 18px 24px rgba(0, 0, 0, 0.44);
+}
+
+.watchChairBack::after {
+  content: "";
+  position: absolute;
+  inset: 13px 18px 35px;
+  border: 1px solid rgba(212, 181, 111, 0.15);
+  border-radius: 54px 54px 30px 30px;
+}
+
+.watchSeat {
+  position: absolute;
+  left: 39px;
+  bottom: 12px;
+  width: 164px;
+  height: 83px;
+  border: 2px solid rgba(115, 93, 156, 0.56);
+  border-radius: 48% 48% 30px 30px;
+  background:
+    linear-gradient(165deg, rgba(101, 75, 135, 0.96), rgba(31, 23, 48, 0.99) 58%);
+  box-shadow:
+    inset 0 7px 13px rgba(255, 255, 255, 0.05),
+    0 12px 17px rgba(0, 0, 0, 0.42);
+}
+
+.watchSeat::before,
+.watchSeat::after {
+  content: "";
+  position: absolute;
+  top: -21px;
+  width: 25px;
+  height: 65px;
+  border: 2px solid rgba(115, 93, 156, 0.52);
+  border-radius: 18px;
+  background: linear-gradient(#4d3a68, #21182f);
+}
+
+.watchSeat::before { left: -13px; transform: rotate(-8deg); }
+.watchSeat::after { right: -13px; transform: rotate(8deg); }
+
+.filmMarks {
+  position: absolute;
+  left: 6px;
+  top: 142px;
+  width: 52px;
+  height: 60px;
+}
+
+.filmMarks span {
+  position: absolute;
+  width: 14px;
+  height: 9px;
+  border: 1px solid rgba(186, 224, 255, 0.74);
+  border-radius: 2px;
+  opacity: 0;
+  animation: filmFrameDrift 4.6s ease-out infinite;
+}
+
+.filmMarks span:nth-child(2) { top: 19px; left: 15px; animation-delay: 1.4s; }
+.filmMarks span:nth-child(3) { top: 38px; left: 3px; animation-delay: 2.8s; }
+
+body.watching .speech {
+  border-color: rgba(126, 190, 255, 0.34);
+  background:
+    radial-gradient(circle at 12% 35%, rgba(39, 104, 158, 0.25), transparent 42%),
+    linear-gradient(145deg, rgba(17, 27, 43, 0.98), rgba(7, 10, 18, 0.98));
 }
 
 .sleepScene,
@@ -777,6 +936,30 @@ body.bedtime .speech {
 @keyframes sleepSceneIn {
   from { opacity: 0; transform: translateY(15px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes watchSceneIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes watchLean {
+  0%, 100% { transform: translate(-7px, 31px) rotate(-2.4deg) scale(0.89); }
+  46% { transform: translate(-10px, 29px) rotate(-3.1deg) scale(0.895); }
+  52% { transform: translate(-6px, 31px) rotate(-1.7deg) scale(0.89); }
+}
+
+@keyframes screenFlicker {
+  0%, 100% { opacity: 0.72; }
+  17% { opacity: 0.91; }
+  41% { opacity: 0.63; }
+  68% { opacity: 0.84; }
+}
+
+@keyframes filmFrameDrift {
+  0%, 16% { opacity: 0; transform: translate(-4px, 5px) rotate(-8deg); }
+  34%, 62% { opacity: 0.78; }
+  100% { opacity: 0; transform: translate(18px, -9px) rotate(8deg); }
 }
 
 @keyframes settleIntoBed {

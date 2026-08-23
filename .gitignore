@@ -2,6 +2,7 @@ node_modules/
 .artifacts/
 config/character.local.json
 config/model-bridge.local.json
+config/vision-bridge.local.json
 assets/*.private.*
 assets/*-chroma.png
 .DS_Store

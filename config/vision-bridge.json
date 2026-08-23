@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "command": "node",
+  "args": [],
+  "timeoutMs": 120000,
+  "maxDescriptionChars": 5000
+}

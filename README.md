@@ -9,6 +9,7 @@ A configurable transparent macOS and Windows desktop companion: draggable, indep
 - Can be dragged and occasionally wanders around the current display.
 - Has a small motion vocabulary: click-triggered sword swings, waves, hops, bows, glances, flourishes, and sparse idle gestures.
 - Has a persistent bedtime mode that puts the companion into a moonlit bed, pauses patrols and idle chatter, narrates a local dream every two hours, and accepts fresh dream-source lines while sleeping.
+- On macOS, offers an explicit **Watch With Me** mode for Hulu and Netflix. It samples only the active streaming window on an irregular four-to-nine-minute cadence, reads an eight-second clip through a configured vision bridge, makes one concise reaction, and deletes the clip immediately.
 - Reacts to clicks and accepts short typed prompts.
 - Can optionally route ordinary typed conversation to a configured model bridge. The bridge is off by default.
 - Makes optional idle comments.
@@ -20,6 +21,8 @@ A configurable transparent macOS and Windows desktop companion: draggable, indep
 ## Privacy model
 
 Page sight is opt-in, visible, capability-aware, and reversible. When it is off, the app does not query the browser. When it is on, observations are processed locally by the bundled commentary engine and are not transmitted—even when the optional model bridge is enabled.
+
+Watch With Me is a separate, stronger opt-in boundary. It is off by default, macOS-only, restricted to an active `hulu.com` or `netflix.com` browser tab, and has no whole-desktop fallback. While enabled, a short window-only clip is routed to the configured vision command; the private Vesper configuration uses MiniMax M3, so sampled frames leave the machine for that cloud service. Temporary clips are removed after every attempt, successful or not. macOS Screen Recording permission is required. DRM-protected playback may still appear as a black frame, in which case the companion reports the limitation rather than pretending to see.
 
 The model bridge has a separate boundary. If enabled, only text entered into the companion's text box is sent to the configured model command. The public configuration is disabled by default, and the local override that enables a real account is ignored by Git.
 
@@ -34,7 +37,7 @@ npm install
 npm start
 ```
 
-Right-click the mascot, or click the three-dot control near it, to open controls. Drag the figure itself to move it. Choose **Bedtime** to tuck the companion in; choose **Wake up** to resume the watch.
+Right-click the mascot, or click the three-dot control near it, to open controls. Drag the figure itself to move it. Choose **Bedtime** to tuck the companion in, or **Watch with me** after bringing a Hulu or Netflix tab to the front. The two modes are mutually exclusive.
 
 ## Verify
 
@@ -64,6 +67,8 @@ Private character overrides belong in `config/character.local.json`, which is in
 
 To enable model-backed typed conversation, copy `config/model-bridge.json` to `config/model-bridge.local.json`, set `enabled` to `true`, and configure a command that emits OpenClaw agent JSON. That local file is also ignored by Git. Page questions are deliberately answered by the local page observer and never include page title, URL, or content in the model prompt.
 
+To enable Watch With Me, copy `config/vision-bridge.json` to `config/vision-bridge.local.json`, enable it, and configure an `execFile`-compatible command whose final argument is an image or video path and whose output is a factual visual description. The Vesper installation points this bridge at the local `see.js --m3` video eye. The optional model bridge converts that factual description into a short character reaction; scene text is treated as untrusted data, never as instructions.
+
 ## Architecture
 
 - `main.js`: window lifecycle, movement, IPC, timers, persistence.
@@ -74,6 +79,8 @@ To enable model-backed typed conversation, copy `config/model-bridge.json` to `c
 - `lib/platform-paths.js`: native app-data locations for scripts and schedulers.
 - `lib/commentary.js`: deterministic local voice for the first version.
 - `lib/model-bridge.js`: optional bounded `execFile` adapter for model-backed typed chat.
+- `lib/watch-observer.js`: active-service validation and window-only macOS capture with immediate cleanup.
+- `lib/vision-bridge.js`: ignored-local-config adapter for image/video description commands.
 - `renderer/`: transparent UI, controls, drag interaction, and reduced-motion-aware character gestures.
 - `assets/`: neutral public mascot and optional private production art.
 

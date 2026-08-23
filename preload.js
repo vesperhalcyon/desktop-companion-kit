@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('desktopCompanion', {
   dragBy: (delta) => ipcRenderer.send('pet:drag-by', delta),
   dragEnd: () => ipcRenderer.send('pet:drag-end'),
   openPrivacySettings: () => ipcRenderer.invoke('pet:open-privacy-settings'),
+  openScreenSettings: () => ipcRenderer.invoke('pet:open-screen-settings'),
   quit: () => ipcRenderer.send('pet:quit'),
   onComment: (handler) => {
     const listener = (_event, payload) => handler(payload);

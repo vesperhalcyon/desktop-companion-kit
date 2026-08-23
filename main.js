@@ -5,10 +5,12 @@ const path = require('node:path');
 const {
   app,
   BrowserWindow,
+  desktopCapturer,
   ipcMain,
   Menu,
   screen,
-  shell
+  shell,
+  systemPreferences
 } = require('electron');
 
 const { SettingsStore } = require('./lib/settings-store');
@@ -16,6 +18,8 @@ const { loadCharacterProfile } = require('./lib/character-profile');
 const { InboxReader } = require('./lib/inbox');
 const { PageObserver } = require('./lib/page-observer');
 const { ModelBridge, loadModelBridgeConfig } = require('./lib/model-bridge');
+const { VisionBridge, loadVisionBridgeConfig } = require('./lib/vision-bridge');
+const { WatchObserver } = require('./lib/watch-observer');
 const {
   idleLines,
   clickLines,
@@ -33,11 +37,19 @@ const IDLE_COMMENT_MS = 36000;
 const DREAM_COMMENT_MS = process.env.DESKTOP_COMPANION_SMOKE === '1'
   ? 700
   : 2 * 60 * 60 * 1000;
+const WATCH_MIN_MS = process.env.DESKTOP_COMPANION_SMOKE === '1'
+  ? 700
+  : 4 * 60 * 1000;
+const WATCH_MAX_MS = process.env.DESKTOP_COMPANION_SMOKE === '1'
+  ? 1000
+  : 9 * 60 * 1000;
 
 let petWindow = null;
 let store = null;
 let observer = null;
 let modelBridge = null;
+let visionBridge = null;
+let watchObserver = null;
 let character = loadCharacterProfile(__dirname);
 let inboxReader = null;
 let pageContext = null;
@@ -48,7 +60,11 @@ let wanderTimer = null;
 let idleTimer = null;
 let inboxTimer = null;
 let dreamTimer = null;
+let watchTimer = null;
 let persistTimer = null;
+let watchInFlight = false;
+let watchFailureCode = '';
+let recentWatchLines = [];
 
 app.setName(character.name);
 
@@ -66,6 +82,18 @@ app.whenReady().then(() => {
     bridgeConfig.enabled = false;
   }
   modelBridge = new ModelBridge(bridgeConfig);
+  const visionConfig = loadVisionBridgeConfig(__dirname);
+  if (process.env.DESKTOP_COMPANION_SMOKE === '1'
+      && process.env.DESKTOP_COMPANION_SMOKE_VISION !== '1') {
+    visionConfig.enabled = false;
+  }
+  visionBridge = new VisionBridge(visionConfig);
+  watchObserver = new WatchObserver({
+    platform: process.platform,
+    desktopCapturer,
+    pageObserver: { observe: () => observePage() },
+    clipSeconds: process.env.DESKTOP_COMPANION_SMOKE === '1' ? 2 : 8
+  });
 
   if (process.platform === 'darwin' && app.dock) app.dock.hide();
 
@@ -76,6 +104,7 @@ app.whenReady().then(() => {
   scheduleIdleComments();
   scheduleInbox();
   scheduleDreams();
+  scheduleWatch();
 });
 
 app.on('window-all-closed', () => app.quit());
@@ -119,6 +148,7 @@ function createWindow() {
     clearInterval(idleTimer);
     clearInterval(inboxTimer);
     clearTimeout(dreamTimer);
+    clearTimeout(watchTimer);
   });
 }
 
@@ -194,6 +224,40 @@ function installSmokeCapture() {
     }
     await petWindow.webContents.executeJavaScript(`
       document.getElementById('settingsButton').click();
+      document.getElementById('watchButton').click();
+    `);
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    const watchProbe = await petWindow.webContents.executeJavaScript(`
+      (() => {
+        const wrap = document.getElementById('avatarWrap');
+        const scene = document.querySelector('.watchScene');
+        const foreground = document.querySelector('.watchForeground');
+        return ({
+          watching: wrap.classList.contains('watching'),
+          sleeping: wrap.classList.contains('sleeping'),
+          sceneVisibility: getComputedStyle(scene).visibility,
+          foregroundVisibility: getComputedStyle(foreground).visibility,
+          avatarClipPath: getComputedStyle(document.querySelector('.avatarStage')).clipPath,
+          avatarAnimation: getComputedStyle(document.getElementById('avatar')).animationName,
+          buttonPressed: document.getElementById('watchButton').getAttribute('aria-pressed')
+        });
+      })()
+    `);
+    if (!watchProbe.watching || watchProbe.sleeping
+        || watchProbe.sceneVisibility !== 'visible'
+        || watchProbe.foregroundVisibility !== 'visible'
+        || watchProbe.avatarClipPath === 'none'
+        || watchProbe.buttonPressed !== 'true') {
+      throw new Error('Watch With Me did not enter its visible exclusive state');
+    }
+    const watchImage = await petWindow.capturePage();
+    await petWindow.webContents.executeJavaScript(`
+      document.getElementById('settingsButton').click();
+      document.getElementById('watchButton').click();
+    `);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    await petWindow.webContents.executeJavaScript(`
+      document.getElementById('settingsButton').click();
       document.getElementById('bedtimeButton').click();
     `);
     await new Promise((resolve) => setTimeout(resolve, 1450));
@@ -250,11 +314,15 @@ function installSmokeCapture() {
     }
     const artifactDir = path.join(process.cwd(), '.artifacts');
     const imagePath = path.join(artifactDir, 'desktop-vesper-smoke.png');
+    const watchImagePath = path.join(artifactDir, 'desktop-vesper-watch-smoke.png');
     fs.mkdirSync(artifactDir, { recursive: true });
     fs.writeFileSync(imagePath, image.toPNG());
+    fs.writeFileSync(watchImagePath, watchImage.toPNG());
     process.stdout.write('[smoke] ' + JSON.stringify({
       ...ui,
       gestureProbe,
+      watchProbe,
+      watchImagePath,
       sleepProbe,
       imagePath,
       pageProbe
@@ -282,13 +350,26 @@ function registerIpc() {
     version: app.getVersion(),
     platform: process.platform,
     pageCapability: observer.capability,
-    modelEnabled: modelBridge.enabled
+    modelEnabled: modelBridge.enabled,
+    watchCapability: {
+      supported: watchObserver.supported,
+      visionEnabled: visionBridge.enabled,
+      screenPermission: process.platform === 'darwin'
+        ? systemPreferences.getMediaAccessStatus('screen')
+        : 'unknown',
+      services: ['Hulu', 'Netflix']
+    }
   }));
 
   ipcMain.handle('pet:react', () => {
     if (store.get().bedtimeMode) {
       const line = 'Mm. Still here, little Keeper. Just dreaming.';
       sendComment(line, 'dream');
+      return line;
+    }
+    if (store.get().watchMode) {
+      const line = 'I am watching. The tiny commentary tribunal is in session.';
+      sendComment(line, 'watch');
       return line;
     }
 
@@ -304,6 +385,8 @@ function registerIpc() {
     const pageIntent = isPageIntent(text);
     const bedtimeCommand = /\b(bedtime|go to bed|sleep now|time for bed|good ?night)\b/i.test(text);
     const wakeCommand = /\b(wake up|awake|good morning|rise and shine)\b/i.test(text);
+    const watchCommand = /\b(watch with me|movie mode|watch mode|watch this)\b/i.test(text);
+    const stopWatchCommand = /\b(stop watching|leave movie mode|end watch mode)\b/i.test(text);
     const localCommand = /move|wander|walk|other side|quiet|hush|shh|stop talking/i
       .test(text);
     let context = pageContext;
@@ -312,7 +395,8 @@ function registerIpc() {
     }
 
     let line = '';
-    if (pageIntent || localCommand || bedtimeCommand || wakeCommand || !modelBridge.enabled) {
+    if (pageIntent || localCommand || bedtimeCommand || wakeCommand || watchCommand
+        || stopWatchCommand || !modelBridge.enabled) {
       line = replyToUser(text, context, character);
     } else {
       try {
@@ -331,10 +415,13 @@ function registerIpc() {
       store.update({ idleComments: false });
     }
 
-    if (bedtimeCommand || wakeCommand) {
+    if (bedtimeCommand || wakeCommand || watchCommand || stopWatchCommand) {
       const before = store.get();
-      const next = store.update({ bedtimeMode: bedtimeCommand });
-      syncBedtimeState(before, next);
+      const next = store.update({
+        bedtimeMode: bedtimeCommand,
+        watchMode: watchCommand
+      });
+      syncModes(before, next, watchCommand);
     }
 
     return { line, settings: store.get(), pageContext: context };
@@ -355,7 +442,10 @@ function registerIpc() {
 
   ipcMain.handle('pet:update-settings', (_event, patch) => {
     const before = store.get();
-    const settings = store.update(patch || {});
+    const requested = { ...(patch || {}) };
+    if (requested.bedtimeMode === true) requested.watchMode = false;
+    if (requested.watchMode === true) requested.bedtimeMode = false;
+    const settings = store.update(requested);
 
     if (before.alwaysOnTop !== settings.alwaysOnTop && petWindow) {
       petWindow.setAlwaysOnTop(settings.alwaysOnTop);
@@ -369,14 +459,16 @@ function registerIpc() {
       observePage().then((context) => sendComment(pageComment(context), 'page'));
     }
     if (before.observePages && !settings.observePages) pageContext = null;
-    if (before.bedtimeMode !== settings.bedtimeMode) {
-      syncBedtimeState(before, settings);
+    if (before.bedtimeMode !== settings.bedtimeMode
+        || before.watchMode !== settings.watchMode) {
+      syncModes(before, settings, !before.watchMode && settings.watchMode);
     }
 
     return settings;
   });
 
   ipcMain.handle('pet:open-privacy-settings', () => openPrivacySettings());
+  ipcMain.handle('pet:open-screen-settings', () => openScreenSettings());
 
   ipcMain.on('pet:panel-open', (_event, open) => {
     panelOpen = open;
@@ -433,7 +525,8 @@ function scheduleIdleComments() {
   clearInterval(idleTimer);
   idleTimer = setInterval(async () => {
     const settings = store.get();
-    if (settings.bedtimeMode || !settings.idleComments || panelOpen || isDragging || isMoving) return;
+    if (settings.bedtimeMode || settings.watchMode || !settings.idleComments
+        || panelOpen || isDragging || isMoving) return;
 
     if (settings.observePages && (!pageContext || Math.random() > 0.55)) {
       await observePage();
@@ -454,6 +547,7 @@ function scheduleInbox() {
       const entries = inboxReader.pollEntries();
       for (const entry of entries) {
         const isDream = entry.source === 'dream';
+        if (settings.watchMode) continue;
         if (isDream !== settings.bedtimeMode) continue;
         sendComment(entry.text, isDream ? 'dream' : 'scheduled');
       }
@@ -477,7 +571,7 @@ function scheduleDreams() {
 
 function scheduleWander() {
   clearTimeout(wanderTimer);
-  if (!store || !store.get().wander || store.get().bedtimeMode) return;
+  if (!store || !store.get().wander || store.get().bedtimeMode || store.get().watchMode) return;
 
   const delay = WANDER_MIN_MS + Math.round(Math.random() * (WANDER_MAX_MS - WANDER_MIN_MS));
   wanderTimer = setTimeout(async () => {
@@ -488,6 +582,7 @@ function scheduleWander() {
 
 async function wanderNow(userRequested) {
   if (!petWindow || isMoving || isDragging || panelOpen || store.get().bedtimeMode
+      || store.get().watchMode
       || !store.get().wander && !userRequested) {
     return;
   }
@@ -581,13 +676,102 @@ function openPrivacySettings() {
   return Promise.resolve(false);
 }
 
-function syncBedtimeState(_before, settings) {
-  if (settings.bedtimeMode) clearTimeout(wanderTimer);
+function openScreenSettings() {
+  if (process.platform === 'darwin') {
+    return shell.openExternal(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
+    );
+  }
+  if (process.platform === 'win32') {
+    return shell.openExternal('ms-settings:privacy-screencapture');
+  }
+  return Promise.resolve(false);
+}
+
+function syncModes(_before, settings, watchImmediately = false) {
+  if (settings.bedtimeMode || settings.watchMode) clearTimeout(wanderTimer);
   else if (settings.wander) scheduleWander();
   scheduleDreams();
+  scheduleWatch(watchImmediately);
   if (petWindow && !petWindow.isDestroyed()) {
     petWindow.webContents.send('pet:settings', settings);
   }
+}
+
+function scheduleWatch(immediate = false) {
+  clearTimeout(watchTimer);
+  if (!store || !store.get().watchMode) return;
+  const delay = immediate
+    ? (process.env.DESKTOP_COMPANION_SMOKE === '1' ? 500 : 1400)
+    : WATCH_MIN_MS + Math.round(Math.random() * (WATCH_MAX_MS - WATCH_MIN_MS));
+  watchTimer = setTimeout(async () => {
+    await watchNow();
+    if (store && store.get().watchMode) scheduleWatch(false);
+  }, delay);
+}
+
+async function watchNow() {
+  if (watchInFlight || !store || !store.get().watchMode) return;
+  watchInFlight = true;
+  let capture = null;
+  try {
+    if (!visionBridge.enabled) {
+      notifyWatchFailure(
+        'vision-disabled',
+        'Movie mode is ready, but its M3 eye is not configured on this installation.'
+      );
+      return;
+    }
+    capture = await watchObserver.capture();
+    if (!capture.ok) {
+      notifyWatchFailure(capture.code, capture.error);
+      return;
+    }
+    const context = [
+      'Watch With Me is explicitly enabled.',
+      'This is an ' + capture.mediaType + ' sampled only from the active ' + capture.service + ' window.',
+      'Describe the visible action across the sequence factually and do not infer plot beyond it.',
+      capture.page && capture.page.title ? 'Current title: ' + capture.page.title : ''
+    ].filter(Boolean).join(' ');
+    const description = await visionBridge.describe(capture.mediaPath, context);
+    if (!store.get().watchMode) return;
+    if (/\b(?:black|blank|solid dark|no visible (?:video|content|scene)|protected content)\b/i
+      .test(description)) {
+      notifyWatchFailure(
+        'drm-blackout',
+        capture.service + ' is giving my eyes a protected black frame. I can see the window, but not the film inside it.'
+      );
+      return;
+    }
+    const line = await modelBridge.reactToVision(description, {
+      service: capture.service,
+      title: capture.page && capture.page.title
+    }, recentWatchLines);
+    if (!store.get().watchMode) return;
+    const reaction = line || fallbackWatchReaction(description);
+    recentWatchLines = [...recentWatchLines, reaction].slice(-3);
+    watchFailureCode = '';
+    sendComment(reaction, 'watch');
+  } catch (error) {
+    console.warn('[watch] look failed:', error.message);
+    notifyWatchFailure('watch-error', 'My movie eye missed that beat. I will try again in a few minutes.');
+  } finally {
+    if (capture) watchObserver.cleanup(capture);
+    watchInFlight = false;
+  }
+}
+
+function notifyWatchFailure(code, line) {
+  if (!line || watchFailureCode === code || !store.get().watchMode) return;
+  watchFailureCode = code;
+  sendComment(line, 'watch-status');
+}
+
+function fallbackWatchReaction(description) {
+  if (/\bdoor|entrance|arriv/i.test(description)) return 'That entrance was carrying rather a lot of intent.';
+  if (/\brun|chase|fight|weapon/i.test(description)) return 'Well. Subtlety has left the building.';
+  if (/\blaugh|smile|kiss|embrace/i.test(description)) return 'There it is. That was the honest beat.';
+  return 'That shot knew exactly what it was doing.';
 }
 
 function showContextMenu() {
@@ -598,8 +782,22 @@ function showContextMenu() {
       label: settings.bedtimeMode ? 'Wake up' : 'Bedtime',
       click: () => {
         const before = store.get();
-        const next = store.update({ bedtimeMode: !before.bedtimeMode });
-        syncBedtimeState(before, next);
+        const next = store.update({
+          bedtimeMode: !before.bedtimeMode,
+          watchMode: false
+        });
+        syncModes(before, next);
+      }
+    },
+    {
+      label: settings.watchMode ? 'Stop watching' : 'Watch with me',
+      click: () => {
+        const before = store.get();
+        const next = store.update({
+          watchMode: !before.watchMode,
+          bedtimeMode: false
+        });
+        syncModes(before, next, next.watchMode);
       }
     },
     { type: 'separator' },
