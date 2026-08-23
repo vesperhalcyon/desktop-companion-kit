@@ -131,12 +131,9 @@ function applyCharacter(character) {
   characterTitle.textContent = character.title;
   avatar.src = '../assets/' + character.avatar;
   avatar.alt = 'A tiny illustrated ' + character.name;
-  if (character.watchAvatar) {
-    watchAvatar.src = '../assets/' + character.watchAvatar;
-    watchAvatar.alt = 'A tiny seated ' + character.name;
-  } else {
-    watchAvatar.removeAttribute('src');
-  }
+  const seatedAsset = character.watchAvatar || 'mascot.seated.private.png';
+  watchAvatar.src = '../assets/' + seatedAsset;
+  watchAvatar.alt = 'A tiny seated ' + character.name;
   document.documentElement.style.setProperty('--violet', character.accent);
   document.documentElement.style.setProperty('--violet-deep', character.accentDeep);
 }

@@ -263,7 +263,8 @@ function installSmokeCapture() {
         || watchProbe.seatTopRatio < 0.9
         || watchProbe.armHeight > 34
         || watchProbe.avatarTop < 20
-        || watchProbe.avatarTop > 32) {
+        || watchProbe.avatarTop > 32
+        || !watchProbe.watchSrc.includes('mascot.seated')) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
     }
     const watchImage = await petWindow.capturePage();
