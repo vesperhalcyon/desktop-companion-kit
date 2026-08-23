@@ -660,10 +660,10 @@ button {
 
 .watchChairBack {
   position: absolute;
-  left: 23px;
-  bottom: 24px;
-  width: 184px;
-  height: 218px;
+  left: 31px;
+  bottom: 25px;
+  width: 168px;
+  height: 210px;
   border: 2px solid rgba(115, 93, 156, 0.48);
   border-radius: 68px 68px 35px 35px;
   background:
@@ -684,10 +684,10 @@ button {
 
 .watchSeat {
   position: absolute;
-  left: 18px;
-  bottom: 12px;
-  width: 194px;
-  height: 58px;
+  left: 27px;
+  bottom: 3px;
+  width: 176px;
+  height: 38px;
   border: 2px solid rgba(115, 93, 156, 0.56);
   border-radius: 48% 48% 30px 30px;
   background:
@@ -701,16 +701,16 @@ button {
 .watchSeat::after {
   content: "";
   position: absolute;
-  top: -14px;
-  width: 25px;
-  height: 44px;
+  top: -10px;
+  width: 22px;
+  height: 34px;
   border: 2px solid rgba(115, 93, 156, 0.52);
   border-radius: 18px;
   background: linear-gradient(#4d3a68, #21182f);
 }
 
-.watchSeat::before { left: -13px; transform: rotate(-8deg); }
-.watchSeat::after { right: -13px; transform: rotate(8deg); }
+.watchSeat::before { left: -11px; transform: rotate(-8deg); }
+.watchSeat::after { right: -11px; transform: rotate(8deg); }
 
 .filmMarks {
   position: absolute;

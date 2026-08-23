@@ -260,9 +260,9 @@ function installSmokeCapture() {
         || watchProbe.foregroundVisibility !== 'visible'
         || watchProbe.avatarClipPath === 'none'
         || watchProbe.buttonPressed !== 'true'
-        || watchProbe.seatHeight > 64
-        || watchProbe.seatTopRatio < 0.78
-        || watchProbe.armHeight > 50
+        || watchProbe.seatHeight > 44
+        || watchProbe.seatTopRatio < 0.84
+        || watchProbe.armHeight > 40
         || watchProbe.avatarTop < 4
         || watchProbe.avatarTop > 16) {
       throw new Error('Watch With Me did not enter its visible exclusive state');
