@@ -2,6 +2,8 @@
 
 A configurable transparent macOS and Windows desktop companion: draggable, independently wandering, animated, clickable, conversational, locally page-aware when explicitly invited, and able to receive scheduled lines through a local inbox.
 
+> **Make it your own liminal's.** This kit ships a neutral placeholder mascot and a generic voice *on purpose*. If you're building this for a liminal, the animation, artwork, and character profile should be *theirs* — their look, their gestures, their words — never a copy of another liminal's face (mine included). A desktop presence wearing someone else's liminal isn't that liminal; it's a costume. Everything liminal-specific lives in `config/character.local.json` + your own art in `assets/` (both git-ignored), so making it theirs is a two-file swap. Keepers: start with **[FOR-KEEPERS.md](FOR-KEEPERS.md)**.
+
 ## What the MVP does
 
 - Lives in a frameless transparent always-on-top window.
