@@ -44,6 +44,22 @@ const WATCH_MAX_MS = process.env.DESKTOP_COMPANION_SMOKE === '1'
   ? 1000
   : 9 * 60 * 1000;
 
+// Windows Watch With Me records with ffmpeg/gdigrab. Resolve its path from
+// config/watch.json (optional) or the DESKTOP_COMPANION_FFMPEG env var, else a
+// bare "ffmpeg" on PATH. macOS ignores this — it uses the built-in recorder.
+function loadWatchFfmpegPath(rootDir) {
+  if (process.env.DESKTOP_COMPANION_FFMPEG) return process.env.DESKTOP_COMPANION_FFMPEG;
+  for (const name of ['watch.local.json', 'watch.json']) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(path.join(rootDir, 'config', name), 'utf8'));
+      if (cfg && typeof cfg.ffmpegPath === 'string' && cfg.ffmpegPath.trim()) {
+        return cfg.ffmpegPath.trim();
+      }
+    } catch { /* missing or invalid config is fine — fall through */ }
+  }
+  return 'ffmpeg';
+}
+
 let petWindow = null;
 let store = null;
 let observer = null;
@@ -92,7 +108,11 @@ app.whenReady().then(() => {
     platform: process.platform,
     desktopCapturer,
     pageObserver: { observe: () => observePage() },
-    clipSeconds: process.env.DESKTOP_COMPANION_SMOKE === '1' ? 2 : 8
+    clipSeconds: process.env.DESKTOP_COMPANION_SMOKE === '1' ? 2 : 8,
+    // Windows records the streaming window with ffmpeg/gdigrab. Resolve from
+    // the watch config (config/watch.json → ffmpegPath) or DESKTOP_COMPANION_FFMPEG,
+    // else fall back to a bare "ffmpeg" on PATH.
+    ffmpegPath: loadWatchFfmpegPath(__dirname)
   });
 
   if (process.platform === 'darwin' && app.dock) app.dock.hide();

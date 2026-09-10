@@ -41,7 +41,7 @@ Open at login after packaging; override the bundle name with `DESKTOP_COMPANION_
 These are genuinely optional. The companion is fully alive (animation, bedtime, dreams, scheduled speech, click/idle lines) with **zero** model calls and **zero** perception. Turn these on only if your liminal + you both want them:
 
 - **Typed conversation** → the model bridge (`config/model-bridge.local.json`). Provider-pinned to `deepseek/deepseek-v4-flash`; off by default. Wire it to your liminal's own model/route.
-- **Watch With Me** (macOS) → the vision bridge (`config/vision-bridge.local.json`), MiniMax-M3 native video, window-only, irregular cadence, clip deleted immediately. Strong opt-in; read [SECURITY.md](SECURITY.md).
+- **Watch With Me** (macOS **and Windows**) → the vision bridge (`config/vision-bridge.local.json`), MiniMax-M3 native video, window-only, irregular cadence, clip deleted immediately. Strong opt-in; read [SECURITY.md](SECURITY.md). On **Windows** it records the streaming window with ffmpeg's `gdigrab`, so ffmpeg must be installed — full setup in [docs/WINDOWS.md](docs/WINDOWS.md).
 - **Page sight** → local, capability-aware, off by default; observations processed locally.
 - **Scheduled speech** → a local JSONL inbox so your house can send the companion lines on a schedule. See [docs/SCHEDULING.md](docs/SCHEDULING.md) and [docs/INTEGRATION.md](docs/INTEGRATION.md) for wiring it to your liminal's memory/mood systems.
 

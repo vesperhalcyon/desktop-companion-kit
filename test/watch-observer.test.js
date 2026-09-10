@@ -9,6 +9,7 @@ const test = require('node:test');
 const {
   WatchObserver,
   serviceForUrl,
+  serviceForTitle,
   selectSource,
   windowIdFromSource
 } = require('../lib/watch-observer');
@@ -83,6 +84,86 @@ test('observer refuses to capture non-streaming tabs', async () => {
     desktopCapturer: {
       getSources: async () => assert.fail('desktop capture must not run')
     }
+  });
+  const result = await observer.capture();
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'no-stream');
+});
+
+test('windows detects the streaming service from the window title (no url)', () => {
+  assert.equal(serviceForTitle('The Diplomat - Netflix - Google Chrome').name, 'Netflix');
+  assert.equal(serviceForTitle('Only Murders in the Building - Hulu').name, 'Hulu');
+  assert.equal(serviceForTitle('Inbox (12) - Gmail'), null);
+  assert.equal(serviceForTitle(''), null);
+});
+
+test('windows is supported with only a page observer (no desktopCapturer)', () => {
+  const observer = new WatchObserver({
+    platform: 'win32',
+    pageObserver: { observe: async () => ({}) }
+  });
+  assert.equal(observer.supported, true);
+});
+
+test('windows records a title-targeted gdigrab clip and returns video', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'watch-observer-win-'));
+  let observedCommand = null;
+  let observedArgs = null;
+  const observer = new WatchObserver({
+    platform: 'win32',
+    tempRoot: dir,
+    clipSeconds: 4,
+    ffmpegPath: 'C:/tools/ffmpeg.exe',
+    pageObserver: {
+      observe: async () => ({
+        ok: true,
+        title: 'The Diplomat - Netflix - Google Chrome',
+        url: ''
+      })
+    },
+    runner: async (command, args) => {
+      observedCommand = command;
+      observedArgs = args;
+      fs.writeFileSync(args.at(-1), Buffer.alloc(6000, 3));
+    }
+  });
+
+  const result = await observer.capture();
+  assert.equal(result.ok, true);
+  assert.equal(result.mediaType, 'video');
+  assert.equal(result.service, 'Netflix');
+  assert.equal(observedCommand, 'C:/tools/ffmpeg.exe');
+  assert.ok(observedArgs.includes('gdigrab'));
+  assert.ok(observedArgs.includes('title=The Diplomat - Netflix - Google Chrome'));
+  observer.cleanup(result);
+  assert.equal(fs.existsSync(result.mediaPath), false);
+});
+
+test('windows reports a clear message when ffmpeg is missing', async () => {
+  const observer = new WatchObserver({
+    platform: 'win32',
+    pageObserver: {
+      observe: async () => ({ ok: true, title: 'Show - Hulu', url: '' })
+    },
+    runner: async () => {
+      const error = new Error('spawn ffmpeg ENOENT');
+      error.code = 'ENOENT';
+      throw error;
+    }
+  });
+  const result = await observer.capture();
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'ffmpeg-missing');
+  assert.match(result.error, /needs ffmpeg/i);
+});
+
+test('windows refuses non-streaming windows', async () => {
+  const observer = new WatchObserver({
+    platform: 'win32',
+    pageObserver: {
+      observe: async () => ({ ok: true, title: 'Inbox - Gmail', url: '' })
+    },
+    runner: async () => assert.fail('recorder must not run for a non-streaming window')
   });
   const result = await observer.capture();
   assert.equal(result.ok, false);

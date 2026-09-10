@@ -1,0 +1,4 @@
+{
+  "_comment": "Watch With Me capture settings. On Windows the clip is recorded with ffmpeg's gdigrab; set ffmpegPath if ffmpeg is not on PATH (or set the DESKTOP_COMPANION_FFMPEG env var, or create config/watch.local.json). Leave ffmpegPath empty to use a bare 'ffmpeg' on PATH. macOS ignores this file and uses the built-in window recorder.",
+  "ffmpegPath": ""
+}
